@@ -1,123 +1,141 @@
+import { Wallet, ShieldAlert, Trophy, ArrowUpRight, ArrowDownRight, Clock, MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
-import { Wallet, ShieldAlert, Trophy, Users, ArrowUpRight, CheckCircle2, Clock, ChevronRight } from 'lucide-react';
 
 export default function ExecutiveDashboardPage() {
   return (
-    <div className="space-y-8 max-w-7xl mx-auto animate-fade-in">
-      <div className="relative">
-        <h1 className="text-3xl font-black text-brand-text tracking-tight flex items-center gap-3">
-          Executive Dashboard Overview
-          <div className="h-1.5 w-1.5 rounded-full bg-brand-gold animate-pulse" />
-        </h1>
-        <p className="text-sm text-brand-muted mt-2 max-w-2xl">
-          Live platform revenue metrics, pending approval queues, and match activity.
-        </p>
+    <div className="space-y-6 max-w-6xl mx-auto pb-10">
+      
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
+          <p className="text-sm text-muted-foreground">
+            Welcome back! Here's what's happening today.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="px-4 py-2 bg-card border border-border text-sm font-medium rounded-md shadow-sm hover:bg-accent transition-colors">
+            Download Report
+          </button>
+          <Link href="/financial/deposits" className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-md shadow-sm hover:opacity-90 transition-opacity">
+            Review Pending Queues
+          </Link>
+        </div>
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="glass-panel glass-panel-hover rounded-3xl p-6 space-y-4 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-brand-gold/10 rounded-bl-full -z-10 transition-transform group-hover:scale-110" />
-          <div className="flex items-center justify-between text-brand-muted">
-            <span className="text-xs font-bold tracking-wider uppercase text-brand-gold">Net Revenue</span>
-            <Wallet className="text-brand-gold opacity-80" size={20} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between text-muted-foreground mb-4">
+            <span className="text-sm font-medium">Total Revenue</span>
+            <Wallet size={16} />
           </div>
-          <div className="text-4xl font-black text-brand-text tracking-tight">₹42,850</div>
-          <div className="text-xs text-brand-emerald font-bold flex items-center gap-1 bg-brand-emerald/10 w-fit px-2 py-1 rounded-md">
-            <ArrowUpRight size={14} /> +18.4% vs last week
-          </div>
-        </div>
-
-        <div className="glass-panel glass-panel-hover rounded-3xl p-6 space-y-4 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-brand-emerald/10 rounded-bl-full -z-10 transition-transform group-hover:scale-110" />
-          <div className="flex items-center justify-between text-brand-muted">
-            <span className="text-xs font-bold tracking-wider uppercase text-brand-emerald">Approvals</span>
-            <Clock className="text-brand-emerald opacity-80" size={20} />
-          </div>
-          <div className="text-4xl font-black text-brand-text tracking-tight">14</div>
-          <div className="text-xs text-brand-muted font-semibold flex gap-2">
-            <span className="bg-white/5 px-2 py-1 rounded-md">8 Deposits</span>
-            <span className="bg-white/5 px-2 py-1 rounded-md">6 Withdrawals</span>
+          <div className="text-2xl font-bold mb-1">₹42,850.00</div>
+          <div className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+            <ArrowUpRight size={14} /> +18.4% from last month
           </div>
         </div>
 
-        <div className="glass-panel glass-panel-hover rounded-3xl p-6 space-y-4 relative overflow-hidden group border-brand-rose/20">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-brand-rose/10 rounded-bl-full -z-10 transition-transform group-hover:scale-110" />
-          <div className="flex items-center justify-between text-brand-muted">
-            <span className="text-xs font-bold tracking-wider uppercase text-brand-rose">Disputes</span>
-            <ShieldAlert className="text-brand-rose opacity-80 animate-pulse-slow" size={20} />
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between text-muted-foreground mb-4">
+            <span className="text-sm font-medium">Pending Approvals</span>
+            <Clock size={16} />
           </div>
-          <div className="text-4xl font-black text-brand-rose tracking-tight drop-shadow-[0_0_10px_rgba(244,63,94,0.3)]">3</div>
-          <div className="text-xs text-brand-rose/80 font-semibold bg-brand-rose/10 w-fit px-2 py-1 rounded-md">
-            Manual review required
+          <div className="text-2xl font-bold mb-1">14</div>
+          <div className="text-xs text-muted-foreground font-medium flex gap-2">
+            <span>8 Deposits</span> • <span>6 Withdrawals</span>
           </div>
         </div>
 
-        <div className="glass-panel glass-panel-hover rounded-3xl p-6 space-y-4 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-brand-cyan/10 rounded-bl-full -z-10 transition-transform group-hover:scale-110" />
-          <div className="flex items-center justify-between text-brand-muted">
-            <span className="text-xs font-bold tracking-wider uppercase text-brand-cyan">Active Contests</span>
-            <Trophy className="text-brand-cyan opacity-80" size={20} />
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between text-muted-foreground mb-4">
+            <span className="text-sm font-medium">Open Disputes</span>
+            <ShieldAlert size={16} />
           </div>
-          <div className="text-4xl font-black text-brand-text tracking-tight">24</div>
-          <div className="text-xs text-brand-muted font-semibold flex gap-2">
-             <span className="bg-white/5 px-2 py-1 rounded-md">14 Ludo</span>
-             <span className="bg-white/5 px-2 py-1 rounded-md">10 Carrom</span>
+          <div className="text-2xl font-bold mb-1">3</div>
+          <div className="text-xs text-rose-600 font-medium flex items-center gap-1">
+            <ArrowDownRight size={14} /> Requires attention
+          </div>
+        </div>
+
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between text-muted-foreground mb-4">
+            <span className="text-sm font-medium">Active Contests</span>
+            <Trophy size={16} />
+          </div>
+          <div className="text-2xl font-bold mb-1">24</div>
+          <div className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+            <ArrowUpRight size={14} className="text-emerald-600" /> +2 since yesterday
           </div>
         </div>
       </div>
 
-      {/* Quick Desk Links */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4">
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Finance Desk */}
-        <div className="glass-panel rounded-3xl p-6 space-y-5 flex flex-col justify-between group">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-extrabold text-lg text-brand-text">Financial Desk</h3>
-              <span className="text-xs bg-brand-emerald/10 text-brand-emerald px-2.5 py-1 rounded-lg font-bold border border-brand-emerald/20">14 Pending</span>
-            </div>
-            <p className="text-sm text-brand-muted font-medium">Verify user UPI payment receipts and approve bank IMPS payouts.</p>
+        {/* Recent Activity Table (Takes up 2 columns) */}
+        <div className="lg:col-span-2 bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+            <h2 className="font-semibold text-lg">Action Required</h2>
+            <button className="text-muted-foreground hover:text-foreground">
+              <MoreHorizontal size={18} />
+            </button>
           </div>
-          <div className="flex flex-col gap-3">
-            <Link href="/financial/deposits" className="flex items-center justify-between py-3 px-5 bg-brand-emerald text-brand-darker font-bold rounded-xl text-sm hover:scale-[1.02] transition-transform shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-              Deposits Queue <ChevronRight size={16} />
-            </Link>
-            <Link href="/financial/withdrawals" className="flex items-center justify-between py-3 px-5 bg-brand-darker border border-brand-border hover:border-brand-emerald/50 text-brand-text font-bold rounded-xl text-sm hover:bg-brand-emerald/5 transition-all">
-              Withdrawals Queue <ChevronRight size={16} />
-            </Link>
-          </div>
-        </div>
-
-        {/* Dispute Desk */}
-        <div className="glass-panel rounded-3xl p-6 space-y-5 flex flex-col justify-between group border-brand-rose/20">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-extrabold text-lg text-brand-text">Dispute Desk</h3>
-              <span className="text-xs bg-brand-rose/10 text-brand-rose px-2.5 py-1 rounded-lg font-bold border border-brand-rose/20">3 Disputed</span>
-            </div>
-            <p className="text-sm text-brand-muted font-medium">Review side-by-side screenshot proofs when players have conflicting match results.</p>
-          </div>
-          <div className="pt-2 mt-auto">
-            <Link href="/disputes" className="flex items-center justify-between py-3 px-5 bg-brand-rose text-white font-bold rounded-xl text-sm hover:scale-[1.02] transition-transform shadow-[0_0_15px_rgba(244,63,94,0.3)]">
-              Resolve Disputes <ChevronRight size={16} />
-            </Link>
+          <div className="divide-y divide-border">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-sm font-medium">
+                    U{i}
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Deposit Verification</p>
+                    <p className="text-xs text-muted-foreground">User requested ₹500 via UPI</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-medium bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full">Pending</span>
+                  <Link href="/financial/deposits" className="text-sm font-medium text-primary hover:underline">Review</Link>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Tournament Desk */}
-        <div className="glass-panel rounded-3xl p-6 space-y-5 flex flex-col justify-between group border-brand-gold/20">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-extrabold text-lg text-brand-text">Pool Manager</h3>
-              <span className="text-xs bg-brand-gold/10 text-brand-gold px-2.5 py-1 rounded-lg font-bold border border-brand-gold/20">Live</span>
+        {/* Quick Links / Status (Takes up 1 column) */}
+        <div className="bg-card border border-border rounded-xl shadow-sm p-6 space-y-6">
+          <h2 className="font-semibold text-lg">Quick Actions</h2>
+          
+          <div className="space-y-4">
+            <div className="group">
+              <Link href="/disputes" className="flex flex-col p-4 border border-border rounded-lg hover:border-primary transition-colors">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-sm">Resolve Disputes</span>
+                  <ShieldAlert size={16} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <p className="text-xs text-muted-foreground">Review 3 conflicting match results</p>
+              </Link>
             </div>
-            <p className="text-sm text-brand-muted font-medium">Create pools, edit entry fees, adjust commission rake %, or pin featured items.</p>
-          </div>
-          <div className="pt-2 mt-auto">
-            <Link href="/tournaments" className="flex items-center justify-between py-3 px-5 bg-gradient-to-r from-brand-gold to-amber-500 text-brand-darker font-bold rounded-xl text-sm hover:scale-[1.02] transition-transform shadow-[0_0_15px_rgba(255,215,0,0.3)]">
-              Manage Contests <ChevronRight size={16} />
-            </Link>
+            
+            <div className="group">
+              <Link href="/financial/withdrawals" className="flex flex-col p-4 border border-border rounded-lg hover:border-primary transition-colors">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-sm">Release Payouts</span>
+                  <Wallet size={16} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <p className="text-xs text-muted-foreground">Approve 6 pending IMPS withdrawals</p>
+              </Link>
+            </div>
+            
+            <div className="group">
+              <Link href="/tournaments" className="flex flex-col p-4 border border-border rounded-lg hover:border-primary transition-colors">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium text-sm">Manage Tournaments</span>
+                  <Trophy size={16} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <p className="text-xs text-muted-foreground">Create or edit prize pools</p>
+              </Link>
+            </div>
           </div>
         </div>
 
