@@ -1,161 +1,169 @@
 'use client';
 
 import { useState } from 'react';
-import { ShieldAlert, Trophy, XCircle, RotateCcw, Image as ImageIcon, AlertTriangle } from 'lucide-react';
+import SideBySideProofViewer, { DisputeMatch } from '@/components/SideBySideProofViewer';
+import { ShieldAlert, RefreshCw, CheckCircle2, Search } from 'lucide-react';
 
-interface DisputeItem {
-  id: string;
-  game: string;
-  prizePool: number;
-  entryFee: number;
-  userA: { name: string; claim: 'WON' | 'LOSS' | 'ERROR'; screenshotUrl?: string };
-  userB: { name: string; claim: 'WON' | 'LOSS' | 'ERROR'; screenshotUrl?: string };
-  disputeReason: string;
-  status: 'DISPUTED' | 'RESOLVED_USER_A' | 'RESOLVED_USER_B' | 'CANCELLED_REFUNDED';
-}
-
-const mockDisputes: DisputeItem[] = [
+const MOCK_DISPUTES: DisputeMatch[] = [
   {
-    id: 'MCH-7701',
-    game: 'Ludo King 1v1',
-    prizePool: 100,
+    matchId: 'M-7701',
+    gameType: 'Ludo King',
+    roomCode: '829104',
     entryFee: 50,
-    userA: { name: 'Firoj (Host)', claim: 'WON', screenshotUrl: '/assets/screenshot_proof1.png' },
-    userB: { name: 'Faizan (Guest)', claim: 'WON', screenshotUrl: '/assets/screenshot_proof2.png' },
-    disputeReason: 'Both players claimed WON (Dual Victory Claim)',
-    status: 'DISPUTED',
+    prizePool: 90,
+    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+    playerA: {
+      userId: 'usr_101',
+      userName: 'Aarav Sharma',
+      userPhone: '+91 9811122233',
+      claimedStatus: 'WON',
+      proofUrl: 'https://images.unsplash.com/photo-1611996575749-79a3a250f948?w=800&q=80',
+      entryFeeBreakdown: { mainCash: 45, bonusCash: 5 },
+    },
+    playerB: {
+      userId: 'usr_102',
+      userName: 'Rohan Verma',
+      userPhone: '+91 9844455566',
+      claimedStatus: 'WON',
+      proofUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80',
+      entryFeeBreakdown: { mainCash: 50, bonusCash: 0 },
+    },
   },
   {
-    id: 'MCH-7702',
-    game: 'Carrom Clash 1v1',
-    prizePool: 50,
-    entryFee: 25,
-    userA: { name: 'Aniket (Host)', claim: 'WON', screenshotUrl: '/assets/screenshot_proof3.png' },
-    userB: { name: 'Rohit (Guest)', claim: 'ERROR', screenshotUrl: undefined },
-    disputeReason: 'User A claimed WON, User B reported ERROR (Disconnect / App crash)',
-    status: 'DISPUTED',
+    matchId: 'M-7702',
+    gameType: 'Carrom',
+    roomCode: '441092',
+    entryFee: 100,
+    prizePool: 180,
+    createdAt: new Date(Date.now() - 1000 * 60 * 75).toISOString(),
+    playerA: {
+      userId: 'usr_201',
+      userName: 'Vikram Seth',
+      userPhone: '+91 9722233344',
+      claimedStatus: 'WON',
+      proofUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=800&q=80',
+      entryFeeBreakdown: { mainCash: 90, bonusCash: 10 },
+    },
+    playerB: {
+      userId: 'usr_202',
+      userName: 'Suresh Raina',
+      userPhone: '+91 9755566677',
+      claimedStatus: 'ERROR',
+      proofUrl: undefined,
+      entryFeeBreakdown: { mainCash: 100, bonusCash: 0 },
+    },
   },
 ];
 
-export default function DisputeResolverPage() {
-  const [disputes, setDisputes] = useState<DisputeItem[]>(mockDisputes);
+export default function DisputesPage() {
+  const [disputes, setDisputes] = useState<DisputeMatch[]>(MOCK_DISPUTES);
+  const [search, setSearch] = useState('');
 
-  const handleDeclareUserA = (id: string) => {
-    setDisputes(prev => prev.map(d => d.id === id ? { ...d, status: 'RESOLVED_USER_A' } : d));
+  const handleDeclareWinner = async (matchId: string, winnerUserId: string) => {
+    // Production RPC: credits 100% prize pool to winner, updates match status to SETTLED
+    setDisputes((prev) => prev.filter((item) => item.matchId !== matchId));
   };
 
-  const handleDeclareUserB = (id: string) => {
-    setDisputes(prev => prev.map(d => d.id === id ? { ...d, status: 'RESOLVED_USER_B' } : d));
+  const handleCancelAndRefund = async (matchId: string) => {
+    // Production RPC: refunds entry fees proportionally back into exact wallet buckets
+    setDisputes((prev) => prev.filter((item) => item.matchId !== matchId));
   };
 
-  const handleCancelAndRefund = (id: string) => {
-    setDisputes(prev => prev.map(d => d.id === id ? { ...d, status: 'CANCELLED_REFUNDED' } : d));
-  };
+  const filteredDisputes = disputes.filter((item) => 
+    item.matchId.toLowerCase().includes(search.toLowerCase()) ||
+    item.roomCode.includes(search) ||
+    item.playerA.userName.toLowerCase().includes(search.toLowerCase()) ||
+    item.playerB.userName.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-black text-slate-100 tracking-tight">1v1 Match Dispute Resolver Desk</h1>
-        <p className="text-sm text-slate-400">Review side-by-side player screenshot proof and resolve disputed match prize pools.</p>
+    <div className="space-y-6 max-w-6xl mx-auto pb-10">
+      
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            1v1 Match Dispute Resolver Desk
+            <span className="text-xs bg-rose-50 text-rose-700 px-2.5 py-0.5 rounded-full font-semibold border border-rose-200/60">
+              {disputes.length} Disputed Matches
+            </span>
+          </h1>
+          <p className="text-sm text-slate-500">
+            Inspect side-by-side screenshot proofs when players submit conflicting match results (WON vs WON or WON vs ERROR).
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setDisputes(MOCK_DISPUTES)}
+            className="px-3 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors inline-flex items-center gap-1.5"
+          >
+            <RefreshCw size={14} /> Refresh Queue
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-6">
-        {disputes.map((dispute) => (
-          <div key={dispute.id} className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-6 shadow-xl">
-            {/* Header info */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-              <div>
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-xs text-rose-400 font-bold">{dispute.id}</span>
-                  <h3 className="font-bold text-slate-100 text-sm">{dispute.game}</h3>
-                  <span className="text-xs bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2.5 py-0.5 rounded-full font-bold">
-                    Prize Pool: ₹{dispute.prizePool}
-                  </span>
-                </div>
-                <div className="text-xs text-slate-400 pt-1 flex items-center gap-1.5">
-                  <AlertTriangle size={14} className="text-amber-400" />
-                  <span>Reason: {dispute.disputeReason}</span>
-                </div>
-              </div>
-
-              {dispute.status !== 'DISPUTED' && (
-                <div className="text-xs font-bold px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  {dispute.status === 'CANCELLED_REFUNDED' ? '✓ CANCELLED & 100% REFUNDED TO BUCKETS' : `✓ WINNER DECLARED (${dispute.status.replace('RESOLVED_', '')})`}
-                </div>
-              )}
-            </div>
-
-            {/* Side-by-side screenshot proof inspector */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* User A Box */}
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-slate-200 text-xs">{dispute.userA.name}</h4>
-                  <span className="text-xs font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">
-                    Claimed: {dispute.userA.claim}
-                  </span>
-                </div>
-                <div className="h-44 bg-slate-900 rounded-lg border border-slate-800 flex items-center justify-center text-slate-500">
-                  {dispute.userA.screenshotUrl ? (
-                    <div className="text-center space-y-2">
-                      <ImageIcon size={32} className="mx-auto text-amber-400" />
-                      <span className="text-xs text-slate-300 font-mono block">Screenshot Proof Uploaded</span>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-slate-500">No screenshot attached</span>
-                  )}
-                </div>
-              </div>
-
-              {/* User B Box */}
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-slate-200 text-xs">{dispute.userB.name}</h4>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                    dispute.userB.claim === 'WON' ? 'text-emerald-400 bg-emerald-400/10' : 'text-amber-400 bg-amber-400/10'
-                  }`}>
-                    Claimed: {dispute.userB.claim}
-                  </span>
-                </div>
-                <div className="h-44 bg-slate-900 rounded-lg border border-slate-800 flex items-center justify-center text-slate-500">
-                  {dispute.userB.screenshotUrl ? (
-                    <div className="text-center space-y-2">
-                      <ImageIcon size={32} className="mx-auto text-amber-400" />
-                      <span className="text-xs text-slate-300 font-mono block">Screenshot Proof Uploaded</span>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-slate-500">No screenshot attached</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Admin Resolution Buttons */}
-            {dispute.status === 'DISPUTED' && (
-              <div className="flex flex-wrap items-center justify-end gap-3 pt-2 border-t border-slate-800">
-                <button
-                  onClick={() => handleDeclareUserA(dispute.id)}
-                  className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors shadow-lg shadow-emerald-500/10"
-                >
-                  <Trophy size={16} /> Declare User A Winner
-                </button>
-                <button
-                  onClick={() => handleDeclareUserB(dispute.id)}
-                  className="px-4 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors shadow-lg shadow-cyan-500/10"
-                >
-                  <Trophy size={16} /> Declare User B Winner
-                </button>
-                <button
-                  onClick={() => handleCancelAndRefund(dispute.id)}
-                  className="px-4 py-2.5 bg-slate-800 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors"
-                >
-                  <RotateCcw size={16} /> Cancel & Refund Both (To Buckets)
-                </button>
-              </div>
-            )}
+      {/* Rules Information Card */}
+      <div className="bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-xl p-5 shadow-sm border border-slate-800 space-y-2">
+        <div className="flex items-center gap-2 font-bold text-sm text-indigo-300">
+          <ShieldAlert size={18} /> Automatic Settlement Logic Rules
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-300 pt-1">
+          <div className="bg-white/5 p-2.5 rounded-lg border border-white/10">
+            <span className="font-semibold text-emerald-400 block mb-0.5">WON vs LOSS</span>
+            <span>Auto-declared winner, credited automatically.</span>
           </div>
-        ))}
+          <div className="bg-white/5 p-2.5 rounded-lg border border-white/10">
+            <span className="font-semibold text-rose-400 block mb-0.5">WON vs WON / ERROR</span>
+            <span>Flagged for Admin manual screenshot inspection.</span>
+          </div>
+          <div className="bg-white/5 p-2.5 rounded-lg border border-white/10">
+            <span className="font-semibold text-amber-400 block mb-0.5">ERROR vs ERROR</span>
+            <span>Auto-cancelled with 100% proportional wallet refund.</span>
+          </div>
+        </div>
       </div>
+
+      {/* Search Bar */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input 
+            type="text"
+            placeholder="Search by Match ID, Room Code, or Player Name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+          />
+        </div>
+        <div className="text-xs font-semibold text-slate-500">
+          Showing {filteredDisputes.length} of {disputes.length} active disputes
+        </div>
+      </div>
+
+      {/* Disputes List */}
+      {filteredDisputes.length > 0 ? (
+        <div className="space-y-6">
+          {filteredDisputes.map((dispute) => (
+            <SideBySideProofViewer 
+              key={dispute.matchId}
+              dispute={dispute}
+              onDeclareWinner={handleDeclareWinner}
+              onCancelAndRefund={handleCancelAndRefund}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm space-y-3">
+          <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+            <CheckCircle2 size={24} />
+          </div>
+          <h3 className="text-lg font-bold text-slate-900">All Match Disputes Resolved!</h3>
+          <p className="text-sm text-slate-500 max-w-sm mx-auto">
+            There are currently no disputed matches requiring admin screenshot review.
+          </p>
+        </div>
+      )}
+
     </div>
   );
 }

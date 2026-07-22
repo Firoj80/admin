@@ -1,101 +1,154 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, XCircle, Clock, Search, ShieldCheck } from 'lucide-react';
+import FinancialApprovalCard, { FinancialItem } from '@/components/FinancialApprovalCard';
+import { Wallet, Search, Filter, RefreshCw, CheckCircle2 } from 'lucide-react';
 
-interface DepositItem {
-  id: string;
-  userName: string;
-  mobileNumber: string;
-  amount: number;
-  promoCode: string;
-  utrNumber: string;
-  paymentMethod: string;
-  requestedAt: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-}
-
-const mockDeposits: DepositItem[] = [
-  { id: 'DEP-8901', userName: 'Firoj Alam', mobileNumber: '+919988776655', amount: 500, promoCode: 'GAMER100', utrNumber: '419208392101', paymentMethod: 'PhonePe', requestedAt: '5 mins ago', status: 'PENDING' },
-  { id: 'DEP-8902', userName: 'Faizan Ahmed', mobileNumber: '+919876543210', amount: 1000, promoCode: 'NONE', utrNumber: '419208392102', paymentMethod: 'Google Pay', requestedAt: '12 mins ago', status: 'PENDING' },
-  { id: 'DEP-8903', userName: 'Aniket Sharma', mobileNumber: '+919123456789', amount: 250, promoCode: 'NONE', utrNumber: '419208392103', paymentMethod: 'Paytm UPI', requestedAt: '25 mins ago', status: 'PENDING' },
+const MOCK_DEPOSITS: FinancialItem[] = [
+  {
+    id: 'DEP-1001',
+    type: 'deposit',
+    userId: 'usr_8819',
+    userName: 'Rahul Sharma',
+    userPhone: '+91 9876543210',
+    amount: 500,
+    utrOrTxnId: '420918239102',
+    proofUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80',
+    createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+    status: 'PENDING_APPROVAL',
+  },
+  {
+    id: 'DEP-1002',
+    type: 'deposit',
+    userId: 'usr_9421',
+    userName: 'Vikas Kumar',
+    userPhone: '+91 9123456789',
+    amount: 1000,
+    utrOrTxnId: '420918991204',
+    proofUrl: 'https://images.unsplash.com/photo-1554224154-26032ffc0d07?w=800&q=80',
+    createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+    status: 'PENDING_APPROVAL',
+  },
+  {
+    id: 'DEP-1003',
+    type: 'deposit',
+    userId: 'usr_3102',
+    userName: 'Amit Singh',
+    userPhone: '+91 9988776655',
+    amount: 250,
+    utrOrTxnId: '420918772910',
+    proofUrl: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=800&q=80',
+    createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+    status: 'PENDING_APPROVAL',
+  },
 ];
 
 export default function ManualDepositsPage() {
-  const [deposits, setDeposits] = useState<DepositItem[]>(mockDeposits);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [deposits, setDeposits] = useState<FinancialItem[]>(MOCK_DEPOSITS);
+  const [search, setSearch] = useState('');
 
-  const handleApprove = (id: string) => {
-    setDeposits(prev => prev.map(d => d.id === id ? { ...d, status: 'APPROVED' } : d));
+  const handleApprove = async (id: string) => {
+    // In production, calls Supabase admin client / RPC
+    setDeposits((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const handleReject = (id: string) => {
-    setDeposits(prev => prev.map(d => d.id === id ? { ...d, status: 'REJECTED' } : d));
+  const handleReject = async (id: string, reason: string) => {
+    // In production, calls Supabase admin client / RPC
+    setDeposits((prev) => prev.filter((item) => item.id !== id));
   };
+
+  const filteredDeposits = deposits.filter((item) => 
+    item.userName?.toLowerCase().includes(search.toLowerCase()) ||
+    item.userPhone.includes(search) ||
+    item.utrOrTxnId?.includes(search) ||
+    item.id.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const totalValue = deposits.reduce((acc, curr) => acc + curr.amount, 0);
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-black text-slate-100 tracking-tight">Manual Deposit Approval Desk</h1>
-        <p className="text-sm text-slate-400">Verify user UPI payment UTR receipt codes and approve main wallet credits.</p>
+    <div className="space-y-6 max-w-6xl mx-auto pb-10">
+      
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+            Manual Deposit Approval Queue
+            <span className="text-xs bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full font-semibold border border-emerald-200/60">
+              {deposits.length} Pending
+            </span>
+          </h1>
+          <p className="text-sm text-slate-500">
+            Verify user UPI payment receipts and UTR reference numbers to credit main wallet balances.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setDeposits(MOCK_DEPOSITS)}
+            className="px-3 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors inline-flex items-center gap-1.5"
+          >
+            <RefreshCw size={14} /> Refresh Queue
+          </button>
+        </div>
       </div>
 
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
-            <Clock size={16} className="text-amber-400" /> Pending Approval Queue ({deposits.filter(d => d.status === 'PENDING').length})
-          </div>
+      {/* Summary KPI Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Pending Count</span>
+          <div className="text-2xl font-extrabold text-slate-900 mt-1">{deposits.length} Requests</div>
         </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Pending Value</span>
+          <div className="text-2xl font-extrabold text-emerald-600 mt-1">₹{totalValue.toLocaleString()}</div>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Verification Speed</span>
+          <div className="text-2xl font-extrabold text-slate-900 mt-1">&lt; 5 mins avg</div>
+        </div>
+      </div>
 
-        <div className="divide-y divide-slate-800">
-          {deposits.map((item) => (
-            <div key={item.id} className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:bg-slate-800/30 transition-colors">
-              <div className="space-y-1">
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-xs text-amber-400 font-bold">{item.id}</span>
-                  <h3 className="font-bold text-slate-100 text-sm">{item.userName}</h3>
-                  <span className="text-xs text-slate-400">{item.mobileNumber}</span>
-                </div>
-                <div className="flex items-center gap-4 text-xs text-slate-400 pt-1">
-                  <span>Method: <strong className="text-slate-200">{item.paymentMethod}</strong></span>
-                  <span>UTR Reference: <strong className="text-slate-200 font-mono">{item.utrNumber}</strong></span>
-                  <span>Coupon: <strong className="text-emerald-400 font-mono">{item.promoCode}</strong></span>
-                </div>
-              </div>
+      {/* Filter / Search Bar */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input 
+            type="text"
+            placeholder="Search by User Name, Phone, or UTR..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+          />
+        </div>
+        <div className="text-xs font-semibold text-slate-500">
+          Showing {filteredDeposits.length} of {deposits.length} pending items
+        </div>
+      </div>
 
-              <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
-                <div className="text-right">
-                  <div className="text-xl font-black text-emerald-400">₹{item.amount}</div>
-                  <div className="text-[10px] text-slate-400">{item.requestedAt}</div>
-                </div>
-
-                {item.status === 'PENDING' ? (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleApprove(item.id)}
-                      className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors shadow-lg shadow-emerald-500/10"
-                    >
-                      <CheckCircle2 size={16} /> Approve & Credit
-                    </button>
-                    <button
-                      onClick={() => handleReject(item.id)}
-                      className="px-4 py-2 bg-slate-800 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors"
-                    >
-                      <XCircle size={16} /> Reject
-                    </button>
-                  </div>
-                ) : (
-                  <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${
-                    item.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                  }`}>
-                    {item.status === 'APPROVED' ? '✓ APPROVED' : '✗ REJECTED'}
-                  </span>
-                )}
-              </div>
-            </div>
+      {/* Queue List */}
+      {filteredDeposits.length > 0 ? (
+        <div className="space-y-4">
+          {filteredDeposits.map((item) => (
+            <FinancialApprovalCard 
+              key={item.id}
+              item={item}
+              onApprove={handleApprove}
+              onReject={handleReject}
+            />
           ))}
         </div>
-      </div>
+      ) : (
+        <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm space-y-3">
+          <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+            <CheckCircle2 size={24} />
+          </div>
+          <h3 className="text-lg font-bold text-slate-900">All Deposit Requests Processed!</h3>
+          <p className="text-sm text-slate-500 max-w-sm mx-auto">
+            There are currently no pending deposits requiring manual review. New requests will appear here automatically.
+          </p>
+        </div>
+      )}
+
     </div>
   );
 }
