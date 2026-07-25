@@ -10,18 +10,11 @@ interface GameCategory {
   display_order: number;
   icon: string;
   description: string;
-  activePoolsCount?: number;
 }
 
-const initialCategories: GameCategory[] = [
-  { id: 'ludo_king', name: 'Ludo King', is_active: true, display_order: 1, icon: '🎲', description: 'Classic 1v1 Ludo board matches with room code pairing', activePoolsCount: 4 },
-  { id: 'carrom', name: 'Carrom', is_active: true, display_order: 2, icon: '🎯', description: 'Realtime 1v1 Carrom board clashes and tournaments', activePoolsCount: 2 },
-  { id: 'chess', name: 'Chess', is_active: true, display_order: 3, icon: '♟️', description: 'Speed Blitz Chess battles with timed clock moves', activePoolsCount: 1 },
-];
-
 export default function GamesManagerPage() {
-  const [categories, setCategories] = useState<GameCategory[]>(initialCategories);
-  const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<GameCategory[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editingCategory, setEditingCategory] = useState<GameCategory | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -37,19 +30,21 @@ export default function GamesManagerPage() {
       setLoading(true);
       const res = await fetch('/api/admin/games');
       const json = await res.json();
-      if (json.success && json.data && json.data.length > 0) {
+      if (json.success && json.data) {
         setCategories(json.data.map((c: any) => ({
           id: c.id,
           name: c.name,
-          is_active: c.is_active ?? true,
+          is_active: c.is_active,
           display_order: c.display_order || 1,
           icon: c.icon || '🎮',
           description: c.description || '',
-          activePoolsCount: c.activePoolsCount || 0,
         })));
+      } else {
+        setCategories([]);
       }
     } catch (err) {
       console.warn('Failed to fetch game categories:', err);
+      setCategories([]);
     } finally {
       setLoading(false);
     }
@@ -68,7 +63,7 @@ export default function GamesManagerPage() {
     setCategories(prev => prev.map(cat => cat.id === id ? { ...cat, is_active: newIsActive } : cat));
 
     try {
-      await fetch('/api/admin/games', {
+      const res = await fetch('/api/admin/games', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -77,6 +72,12 @@ export default function GamesManagerPage() {
           isActive: newIsActive
         })
       });
+      const json = await res.json();
+      if (!json.success) {
+        // Revert on failure
+        setCategories(prev => prev.map(cat => cat.id === id ? { ...cat, is_active: target.is_active } : cat));
+        console.error('Toggle failed:', json.error);
+      }
     } catch (err) {
       console.warn('Failed to toggle category status in Supabase:', err);
       // Revert if error
@@ -110,33 +111,11 @@ export default function GamesManagerPage() {
       icon: formIcon,
       description: formDescription,
       isActive: formIsActive,
-      displayOrder: categories.length + 1
+      displayOrder: editingCategory ? editingCategory.display_order : categories.length + 1
     };
 
-    if (editingCategory) {
-      setCategories(prev => prev.map(c => c.id === editingCategory.id ? {
-        ...c,
-        name: formName,
-        icon: formIcon,
-        description: formDescription,
-        is_active: formIsActive
-      } : c));
-      setEditingCategory(null);
-    } else {
-      setCategories([...categories, {
-        id: catData.id,
-        name: formName,
-        icon: formIcon,
-        description: formDescription,
-        is_active: formIsActive,
-        display_order: catData.displayOrder,
-        activePoolsCount: 0
-      }]);
-      setShowAddModal(false);
-    }
-
     try {
-      await fetch('/api/admin/games', {
+      const res = await fetch('/api/admin/games', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -144,7 +123,14 @@ export default function GamesManagerPage() {
           categoryData: catData
         })
       });
-      fetchLiveCategories();
+      const json = await res.json();
+      if (json.success) {
+        setShowAddModal(false);
+        setEditingCategory(null);
+        await fetchLiveCategories();
+      } else {
+        console.error('Save category failed:', json.error);
+      }
     } catch (err) {
       console.warn('Failed to save category:', err);
     }
@@ -191,6 +177,23 @@ export default function GamesManagerPage() {
           The native Android app dynamically fetches categories where <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-900 font-mono font-bold">is_active = true</code>. Disabling a category here instantly hides its banner and match selection list from all players.
         </div>
       </div>
+
+      {/* Loading State */}
+      {loading && categories.length === 0 && (
+        <div className="text-center py-12 text-slate-400">
+          <RefreshCw size={24} className="animate-spin mx-auto mb-3" />
+          <p className="text-sm font-medium">Loading game categories from Supabase...</p>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && categories.length === 0 && (
+        <div className="text-center py-12 bg-white border border-slate-200 rounded-xl shadow-sm">
+          <Dices size={32} className="text-slate-300 mx-auto mb-3" />
+          <p className="text-sm font-medium text-slate-500">No game categories found in database.</p>
+          <p className="text-xs text-slate-400 mt-1">Click "Add New Game Category" to create one.</p>
+        </div>
+      )}
 
       {/* Categories Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

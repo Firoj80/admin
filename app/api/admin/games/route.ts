@@ -1,14 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
-// Default fallback categories if DB table is not yet seeded
-const defaultCategories = [
-  { id: 'ludo_king', name: 'Ludo King', is_active: true, display_order: 1, icon: '🎲', description: 'Classic 1v1 Ludo board matches' },
-  { id: 'carrom', name: 'Carrom', is_active: true, display_order: 2, icon: '🎯', description: 'Realtime Carrom board clashes' },
-  { id: 'chess', name: 'Chess', is_active: true, display_order: 3, icon: '♟️', description: 'Speed Blitz Chess battles' },
-];
-
-// GET: Fetch game categories
+// GET: Fetch game categories from Supabase (no hardcoded fallback)
 export async function GET() {
   try {
     const { data: categories, error } = await supabaseAdmin
@@ -17,13 +10,13 @@ export async function GET() {
       .order('display_order', { ascending: true });
 
     if (error) {
-      console.warn('Supabase game_categories fetch error:', error.message);
-      return NextResponse.json({ success: true, data: defaultCategories });
+      console.error('Supabase game_categories fetch error:', error.message);
+      return NextResponse.json({ success: false, error: error.message, data: [] }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: categories.length > 0 ? categories : defaultCategories });
+    return NextResponse.json({ success: true, data: categories || [] });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: err.message, data: [] }, { status: 500 });
   }
 }
 
@@ -36,25 +29,28 @@ export async function POST(request: Request) {
     if (action === 'TOGGLE_ACTIVE') {
       const { data, error } = await supabaseAdmin
         .from('game_categories')
-        .upsert({
-          id: categoryId,
+        .update({
           is_active: isActive,
           updated_at: new Date().toISOString()
         })
+        .eq('id', categoryId)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Toggle active error:', error.message);
+        throw error;
+      }
 
       return NextResponse.json({ 
         success: true, 
-        message: `Category ${categoryId} is now ${isActive ? 'ENABLED (Visible in App)' : 'DISABLED (Hidden from App)'}`,
+        message: `Category ${categoryId} is now ${isActive ? 'ENABLED' : 'DISABLED'}`,
         data 
       });
-    } else if (action === 'CREATE' || action === 'UPDATE') {
+    } else if (action === 'CREATE') {
       const { data, error } = await supabaseAdmin
         .from('game_categories')
-        .upsert({
+        .insert([{
           id: categoryData.id,
           name: categoryData.name,
           icon: categoryData.icon || '🎮',
@@ -62,17 +58,36 @@ export async function POST(request: Request) {
           is_active: categoryData.isActive ?? true,
           display_order: categoryData.displayOrder || 1,
           updated_at: new Date().toISOString()
-        })
+        }])
         .select()
         .single();
 
       if (error) throw error;
 
-      return NextResponse.json({ success: true, message: 'Game category saved successfully', data });
+      return NextResponse.json({ success: true, message: 'Game category created successfully', data });
+    } else if (action === 'UPDATE') {
+      const { data, error } = await supabaseAdmin
+        .from('game_categories')
+        .update({
+          name: categoryData.name,
+          icon: categoryData.icon || '🎮',
+          description: categoryData.description || '',
+          is_active: categoryData.isActive ?? true,
+          display_order: categoryData.displayOrder || 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', categoryData.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return NextResponse.json({ success: true, message: 'Game category updated successfully', data });
     }
 
     return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
   } catch (err: any) {
+    console.error('Games API POST error:', err.message);
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }

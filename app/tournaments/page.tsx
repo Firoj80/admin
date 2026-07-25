@@ -16,16 +16,9 @@ interface TournamentItem {
   isActive: boolean;
 }
 
-const mockTournaments: TournamentItem[] = [
-  { id: 'TNT-101', game: 'Ludo King', type: '1v1 Quick Match', entryFee: 50, prizePool: 85, rakePercent: 15, joined: 1, maxSlots: 2, isFeatured: true, isActive: true },
-  { id: 'TNT-102', game: 'Carrom', type: '1v1 Pro Clash', entryFee: 100, prizePool: 180, rakePercent: 10, joined: 2, maxSlots: 2, isFeatured: false, isActive: true },
-  { id: 'TNT-103', game: 'Chess', type: '1v1 Blitz Battle', entryFee: 200, prizePool: 360, rakePercent: 10, joined: 0, maxSlots: 2, isFeatured: true, isActive: true },
-  { id: 'TNT-104', game: 'Ludo King', type: '1v1 High Stakes', entryFee: 500, prizePool: 900, rakePercent: 10, joined: 1, maxSlots: 2, isFeatured: false, isActive: true },
-];
-
 export default function TournamentsPage() {
-  const [tournaments, setTournaments] = useState<TournamentItem[]>(mockTournaments);
-  const [enabledCategories, setEnabledCategories] = useState<string[]>(['Ludo King', 'Carrom', 'Chess']);
+  const [tournaments, setTournaments] = useState<TournamentItem[]>([]);
+  const [enabledCategories, setEnabledCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingItem, setEditingItem] = useState<TournamentItem | null>(null);
@@ -60,7 +53,7 @@ export default function TournamentsPage() {
       const catJson = await catRes.json();
       if (catJson.success && catJson.data) {
         const activeCats: string[] = catJson.data
-          .filter((c: any) => c.is_active ?? true)
+          .filter((c: any) => c.is_active === true)
           .map((c: any) => c.name);
         setEnabledCategories(activeCats);
         if (activeCats.length > 0 && !activeCats.includes(newGame)) {
@@ -71,7 +64,7 @@ export default function TournamentsPage() {
       // Fetch contest pools
       const res = await fetch('/api/admin/tournaments');
       const json = await res.json();
-      if (json.success && json.data && json.data.length > 0) {
+      if (json.success && json.data) {
         const mapped: TournamentItem[] = json.data.map((p: any) => ({
           id: p.id,
           game: p.game_type,
@@ -85,6 +78,8 @@ export default function TournamentsPage() {
           isActive: p.is_active ?? true,
         }));
         setTournaments(mapped);
+      } else {
+        setTournaments([]);
       }
     } catch (err) {
       console.warn('Failed to fetch live contest pools from Supabase:', err);
