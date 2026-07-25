@@ -5,7 +5,7 @@ import { Trophy, Plus, Star, Edit3, Trash2, X, Check, Percent, Search, RefreshCw
 
 interface TournamentItem {
   id: string;
-  game: 'Ludo King' | 'Carrom' | 'Chess';
+  game: string;
   type: string;
   entryFee: number;
   prizePool: number;
@@ -25,6 +25,7 @@ const mockTournaments: TournamentItem[] = [
 
 export default function TournamentsPage() {
   const [tournaments, setTournaments] = useState<TournamentItem[]>(mockTournaments);
+  const [enabledCategories, setEnabledCategories] = useState<string[]>(['Ludo King', 'Carrom', 'Chess']);
   const [loading, setLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingItem, setEditingItem] = useState<TournamentItem | null>(null);
@@ -32,7 +33,7 @@ export default function TournamentsPage() {
   const [search, setSearch] = useState('');
 
   // Create Form State
-  const [newGame, setNewGame] = useState<'Ludo King' | 'Carrom' | 'Chess'>('Ludo King');
+  const [newGame, setNewGame] = useState<string>('Ludo King');
   const [newType, setNewType] = useState('1v1 Standard');
   const [newEntryFee, setNewEntryFee] = useState(100);
   const [newRakePercent, setNewRakePercent] = useState(10);
@@ -40,7 +41,7 @@ export default function TournamentsPage() {
   const [newIsFeatured, setNewIsFeatured] = useState(false);
 
   // Edit Form State
-  const [editGame, setEditGame] = useState<'Ludo King' | 'Carrom' | 'Chess'>('Ludo King');
+  const [editGame, setEditGame] = useState<string>('Ludo King');
   const [editType, setEditType] = useState('');
   const [editEntryFee, setEditEntryFee] = useState(100);
   const [editRakePercent, setEditRakePercent] = useState(10);
@@ -50,9 +51,24 @@ export default function TournamentsPage() {
   const calculatedCreatePrizePool = Math.floor((newEntryFee * newMaxSlots) * (1 - newRakePercent / 100));
   const calculatedEditPrizePool = Math.floor((editEntryFee * editMaxSlots) * (1 - editRakePercent / 100));
 
-  const fetchLivePools = async () => {
+  const fetchLivePoolsAndCategories = async () => {
     try {
       setLoading(true);
+      
+      // Fetch enabled categories
+      const catRes = await fetch('/api/admin/games');
+      const catJson = await catRes.json();
+      if (catJson.success && catJson.data) {
+        const activeCats: string[] = catJson.data
+          .filter((c: any) => c.is_active ?? true)
+          .map((c: any) => c.name);
+        setEnabledCategories(activeCats);
+        if (activeCats.length > 0 && !activeCats.includes(newGame)) {
+          setNewGame(activeCats[0]);
+        }
+      }
+
+      // Fetch contest pools
       const res = await fetch('/api/admin/tournaments');
       const json = await res.json();
       if (json.success && json.data && json.data.length > 0) {
@@ -78,7 +94,7 @@ export default function TournamentsPage() {
   };
 
   useEffect(() => {
-    fetchLivePools();
+    fetchLivePoolsAndCategories();
   }, []);
 
   const openEditModal = (item: TournamentItem) => {
@@ -148,7 +164,7 @@ export default function TournamentsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'CREATE', poolData: newContest })
       });
-      fetchLivePools();
+      fetchLivePoolsAndCategories();
     } catch (err) {
       console.warn('Create contest error:', err);
     }
@@ -178,7 +194,7 @@ export default function TournamentsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'UPDATE', poolId: targetId, poolData: updatedData })
       });
-      fetchLivePools();
+      fetchLivePoolsAndCategories();
     } catch (err) {
       console.warn('Update contest error:', err);
     }
@@ -199,11 +215,20 @@ export default function TournamentsPage() {
     }
   };
 
-  const filteredTournaments = tournaments.filter(t => 
-    t.game.toLowerCase().includes(search.toLowerCase()) ||
-    t.type.toLowerCase().includes(search.toLowerCase()) ||
-    t.id.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredTournaments = tournaments.filter(t => {
+    // Check if the game is in enabled categories
+    const isGameEnabled = enabledCategories.some(cat => 
+      cat.toLowerCase() === t.game.toLowerCase() || 
+      cat.toLowerCase().replace(/\s+/g, '_') === t.game.toLowerCase().replace(/\s+/g, '_')
+    );
+    if (!isGameEnabled) return false;
+
+    return (
+      t.game.toLowerCase().includes(search.toLowerCase()) ||
+      t.type.toLowerCase().includes(search.toLowerCase()) ||
+      t.id.toLowerCase().includes(search.toLowerCase())
+    );
+  });
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-10">
@@ -362,12 +387,12 @@ export default function TournamentsPage() {
                 <label className="text-xs font-semibold text-slate-700 block mb-1">Game Type</label>
                 <select
                   value={newGame}
-                  onChange={(e) => setNewGame(e.target.value as any)}
+                  onChange={(e) => setNewGame(e.target.value)}
                   className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium"
                 >
-                  <option value="Ludo King">Ludo King</option>
-                  <option value="Carrom">Carrom</option>
-                  <option value="Chess">Chess</option>
+                  {enabledCategories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
                 </select>
               </div>
 
@@ -469,12 +494,12 @@ export default function TournamentsPage() {
                 <label className="text-xs font-semibold text-slate-700 block mb-1">Game Type</label>
                 <select
                   value={editGame}
-                  onChange={(e) => setEditGame(e.target.value as any)}
+                  onChange={(e) => setEditGame(e.target.value)}
                   className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium"
                 >
-                  <option value="Ludo King">Ludo King</option>
-                  <option value="Carrom">Carrom</option>
-                  <option value="Chess">Chess</option>
+                  {enabledCategories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
                 </select>
               </div>
 

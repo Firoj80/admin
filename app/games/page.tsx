@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Dices, Plus, Edit3, Check, X, ShieldAlert, Eye, EyeOff, Sparkles, Layers } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Dices, Plus, Edit3, Check, X, Eye, EyeOff, Sparkles, Layers, RefreshCw } from 'lucide-react';
 
 interface GameCategory {
   id: string;
@@ -21,6 +21,7 @@ const initialCategories: GameCategory[] = [
 
 export default function GamesManagerPage() {
   const [categories, setCategories] = useState<GameCategory[]>(initialCategories);
+  const [loading, setLoading] = useState(false);
   const [editingCategory, setEditingCategory] = useState<GameCategory | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -31,8 +32,56 @@ export default function GamesManagerPage() {
   const [formDescription, setFormDescription] = useState('');
   const [formIsActive, setFormIsActive] = useState(true);
 
-  const toggleCategoryStatus = (id: string) => {
-    setCategories(prev => prev.map(cat => cat.id === id ? { ...cat, is_active: !cat.is_active } : cat));
+  const fetchLiveCategories = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/admin/games');
+      const json = await res.json();
+      if (json.success && json.data && json.data.length > 0) {
+        setCategories(json.data.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          is_active: c.is_active ?? true,
+          display_order: c.display_order || 1,
+          icon: c.icon || '🎮',
+          description: c.description || '',
+          activePoolsCount: c.activePoolsCount || 0,
+        })));
+      }
+    } catch (err) {
+      console.warn('Failed to fetch game categories:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveCategories();
+  }, []);
+
+  const toggleCategoryStatus = async (id: string) => {
+    const target = categories.find(c => c.id === id);
+    if (!target) return;
+    const newIsActive = !target.is_active;
+
+    // Optimistic UI update
+    setCategories(prev => prev.map(cat => cat.id === id ? { ...cat, is_active: newIsActive } : cat));
+
+    try {
+      await fetch('/api/admin/games', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'TOGGLE_ACTIVE',
+          categoryId: id,
+          isActive: newIsActive
+        })
+      });
+    } catch (err) {
+      console.warn('Failed to toggle category status in Supabase:', err);
+      // Revert if error
+      setCategories(prev => prev.map(cat => cat.id === id ? { ...cat, is_active: target.is_active } : cat));
+    }
   };
 
   const openAddModal = () => {
@@ -53,8 +102,17 @@ export default function GamesManagerPage() {
     setFormIsActive(cat.is_active);
   };
 
-  const handleSaveCategory = (e: React.FormEvent) => {
+  const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
+    const catData = {
+      id: editingCategory ? editingCategory.id : (formId.toLowerCase().replace(/\s+/g, '_') || `game_${Date.now()}`),
+      name: formName,
+      icon: formIcon,
+      description: formDescription,
+      isActive: formIsActive,
+      displayOrder: categories.length + 1
+    };
+
     if (editingCategory) {
       setCategories(prev => prev.map(c => c.id === editingCategory.id ? {
         ...c,
@@ -65,17 +123,30 @@ export default function GamesManagerPage() {
       } : c));
       setEditingCategory(null);
     } else {
-      const newCat: GameCategory = {
-        id: formId.toLowerCase().replace(/\s+/g, '_') || `game_${Date.now()}`,
+      setCategories([...categories, {
+        id: catData.id,
         name: formName,
         icon: formIcon,
         description: formDescription,
         is_active: formIsActive,
-        display_order: categories.length + 1,
+        display_order: catData.displayOrder,
         activePoolsCount: 0
-      };
-      setCategories([...categories, newCat]);
+      }]);
       setShowAddModal(false);
+    }
+
+    try {
+      await fetch('/api/admin/games', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: editingCategory ? 'UPDATE' : 'CREATE',
+          categoryData: catData
+        })
+      });
+      fetchLiveCategories();
+    } catch (err) {
+      console.warn('Failed to save category:', err);
     }
   };
 
@@ -96,12 +167,20 @@ export default function GamesManagerPage() {
             Control which game categories are enabled or hidden inside the native mobile application home screen.
           </p>
         </div>
-        <button
-          onClick={openAddModal}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-sm transition-colors flex items-center gap-1.5 self-start sm:self-auto"
-        >
-          <Plus size={16} /> Add New Game Category
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={fetchLiveCategories}
+            className="px-3 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors inline-flex items-center gap-1.5"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin text-indigo-600' : ''} /> Refresh Categories
+          </button>
+          <button
+            onClick={openAddModal}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-sm transition-colors flex items-center gap-1.5 self-start sm:self-auto"
+          >
+            <Plus size={16} /> Add New Game Category
+          </button>
+        </div>
       </div>
 
       {/* Info Notice Box */}
@@ -167,7 +246,7 @@ export default function GamesManagerPage() {
 
             <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
               <span className="flex items-center gap-1">
-                <Layers size={14} className="text-indigo-600" /> Active Contest Pools: <strong className="text-slate-800">{cat.activePoolsCount || 0}</strong>
+                <Layers size={14} className="text-indigo-600" /> Status: <strong className="text-slate-800">{cat.is_active ? 'ENABLED' : 'DISABLED'}</strong>
               </span>
               <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                 cat.is_active ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-slate-200 text-slate-600'
