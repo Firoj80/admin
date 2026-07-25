@@ -45,7 +45,7 @@ export default function UsersModerationPage() {
       const res = await fetch('/api/admin/users');
       const json = await res.json();
 
-      if (json.success && json.data && json.data.length > 0) {
+      if (json.success && json.data) {
         const mappedUsers: UserItem[] = json.data.map((u: any) => {
           const w = Array.isArray(u.user_wallets) ? u.user_wallets[0] : u.user_wallets;
           return {
@@ -61,6 +61,8 @@ export default function UsersModerationPage() {
           };
         });
         setUsers(mappedUsers);
+      } else {
+        setUsers([]);
       }
     } catch (err) {
       console.warn('Failed to fetch live users from Supabase, using state:', err);
