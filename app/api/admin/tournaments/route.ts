@@ -20,7 +20,7 @@ export async function GET() {
   }
 }
 
-// POST: Create or Update Contest Pool
+// POST: Create, Update, or Delete Contest Pool
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -46,6 +46,35 @@ export async function POST(request: Request) {
       if (error) throw error;
 
       return NextResponse.json({ success: true, message: 'Contest pool created successfully', data: newPool });
+    } else if (action === 'UPDATE') {
+      const { data: updatedPool, error } = await supabaseAdmin
+        .from('contest_pools')
+        .update({
+          game_type: poolData.game,
+          match_format: poolData.type,
+          entry_fee: poolData.entryFee,
+          prize_pool: poolData.prizePool,
+          rake_percent: poolData.rakePercent,
+          max_slots: poolData.maxSlots,
+          is_featured: poolData.isFeatured,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', poolId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return NextResponse.json({ success: true, message: 'Contest pool updated successfully', data: updatedPool });
+    } else if (action === 'DELETE') {
+      const { error } = await supabaseAdmin
+        .from('contest_pools')
+        .delete()
+        .eq('id', poolId);
+
+      if (error) throw error;
+
+      return NextResponse.json({ success: true, message: 'Contest pool deleted successfully' });
     } else if (action === 'TOGGLE_FEATURED') {
       await supabaseAdmin
         .from('contest_pools')

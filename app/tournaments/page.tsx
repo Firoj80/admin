@@ -26,9 +26,11 @@ const mockTournaments: TournamentItem[] = [
 export default function TournamentsPage() {
   const [tournaments, setTournaments] = useState<TournamentItem[]>(mockTournaments);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<TournamentItem | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  // Form State
+  // Create Form State
   const [newGame, setNewGame] = useState<'Ludo King' | 'Carrom' | 'Chess'>('Ludo King');
   const [newType, setNewType] = useState('1v1 Standard');
   const [newEntryFee, setNewEntryFee] = useState(100);
@@ -36,7 +38,26 @@ export default function TournamentsPage() {
   const [newMaxSlots, setNewMaxSlots] = useState(2);
   const [newIsFeatured, setNewIsFeatured] = useState(false);
 
-  const calculatedPrizePool = Math.floor((newEntryFee * newMaxSlots) * (1 - newRakePercent / 100));
+  // Edit Form State
+  const [editGame, setEditGame] = useState<'Ludo King' | 'Carrom' | 'Chess'>('Ludo King');
+  const [editType, setEditType] = useState('');
+  const [editEntryFee, setEditEntryFee] = useState(100);
+  const [editRakePercent, setEditRakePercent] = useState(10);
+  const [editMaxSlots, setEditMaxSlots] = useState(2);
+  const [editIsFeatured, setEditIsFeatured] = useState(false);
+
+  const calculatedCreatePrizePool = Math.floor((newEntryFee * newMaxSlots) * (1 - newRakePercent / 100));
+  const calculatedEditPrizePool = Math.floor((editEntryFee * editMaxSlots) * (1 - editRakePercent / 100));
+
+  const openEditModal = (item: TournamentItem) => {
+    setEditingItem(item);
+    setEditGame(item.game);
+    setEditType(item.type);
+    setEditEntryFee(item.entryFee);
+    setEditRakePercent(item.rakePercent);
+    setEditMaxSlots(item.maxSlots);
+    setEditIsFeatured(item.isFeatured);
+  };
 
   const toggleFeatured = (id: string) => {
     setTournaments(prev => prev.map(t => t.id === id ? { ...t, isFeatured: !t.isFeatured } : t));
@@ -53,7 +74,7 @@ export default function TournamentsPage() {
       game: newGame,
       type: newType,
       entryFee: Number(newEntryFee),
-      prizePool: calculatedPrizePool,
+      prizePool: calculatedCreatePrizePool,
       rakePercent: Number(newRakePercent),
       joined: 0,
       maxSlots: Number(newMaxSlots),
@@ -62,6 +83,34 @@ export default function TournamentsPage() {
     };
     setTournaments([newContest, ...tournaments]);
     setShowCreateModal(false);
+  };
+
+  const handleUpdateContest = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+
+    setTournaments(prev => prev.map(t => {
+      if (t.id === editingItem.id) {
+        return {
+          ...t,
+          game: editGame,
+          type: editType,
+          entryFee: Number(editEntryFee),
+          prizePool: calculatedEditPrizePool,
+          rakePercent: Number(editRakePercent),
+          maxSlots: Number(editMaxSlots),
+          isFeatured: editIsFeatured,
+        };
+      }
+      return t;
+    }));
+
+    setEditingItem(null);
+  };
+
+  const handleDeleteContest = (id: string) => {
+    setTournaments(prev => prev.filter(t => t.id !== id));
+    setDeletingId(null);
   };
 
   const filteredTournaments = tournaments.filter(t => 
@@ -83,7 +132,7 @@ export default function TournamentsPage() {
             </span>
           </h1>
           <p className="text-sm text-slate-500">
-            Create contest pools for Ludo, Carrom & Chess, configure rake commissions, and pin featured items.
+            Create, edit, delete, and configure rake commissions for Ludo, Carrom & Chess contest pools.
           </p>
         </div>
         <button
@@ -110,7 +159,9 @@ export default function TournamentsPage() {
         </div>
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Average Platform Rake</span>
-          <div className="text-2xl font-extrabold text-emerald-600 mt-1">12.5%</div>
+          <div className="text-2xl font-extrabold text-emerald-600 mt-1">
+            {tournaments.length > 0 ? (tournaments.reduce((acc, t) => acc + t.rakePercent, 0) / tournaments.length).toFixed(1) : 0}%
+          </div>
         </div>
       </div>
 
@@ -139,6 +190,20 @@ export default function TournamentsPage() {
               <div className="flex items-center justify-between">
                 <span className="font-mono text-xs text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200/60">{item.id}</span>
                 <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => openEditModal(item)}
+                    className="p-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
+                    title="Edit Contest Pool"
+                  >
+                    <Edit3 size={14} />
+                  </button>
+                  <button
+                    onClick={() => setDeletingId(item.id)}
+                    className="p-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-400 hover:text-rose-600 hover:border-rose-200 transition-colors"
+                    title="Delete Contest Pool"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                   <button
                     onClick={() => toggleFeatured(item.id)}
                     className={`p-1.5 rounded-lg border transition-colors ${
@@ -261,18 +326,18 @@ export default function TournamentsPage() {
               {/* Calculated Prize Pool Preview */}
               <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200/80 flex items-center justify-between text-xs">
                 <span className="text-slate-500 font-medium">Calculated Winner Prize Pool:</span>
-                <span className="text-base font-extrabold text-emerald-600">₹{calculatedPrizePool}</span>
+                <span className="text-base font-extrabold text-emerald-600">₹{calculatedCreatePrizePool}</span>
               </div>
 
               <div className="flex items-center gap-2 pt-2">
                 <input 
                   type="checkbox"
-                  id="featured"
+                  id="create-featured"
                   checked={newIsFeatured}
                   onChange={(e) => setNewIsFeatured(e.target.checked)}
                   className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
-                <label htmlFor="featured" className="text-xs font-medium text-slate-700 cursor-pointer">
+                <label htmlFor="create-featured" className="text-xs font-medium text-slate-700 cursor-pointer">
                   Pin to Home Screen Featured Carousel
                 </label>
               </div>
@@ -293,6 +358,145 @@ export default function TournamentsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Contest Modal */}
+      {editingItem && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 animate-fade-in">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <span className="font-bold text-slate-900 text-base flex items-center gap-2">
+                <Edit3 size={18} className="text-indigo-600" /> Edit Contest Pool ({editingItem.id})
+              </span>
+              <button 
+                onClick={() => setEditingItem(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateContest} className="p-5 space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Game Type</label>
+                <select
+                  value={editGame}
+                  onChange={(e) => setEditGame(e.target.value as any)}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium"
+                >
+                  <option value="Ludo King">Ludo King</option>
+                  <option value="Carrom">Carrom</option>
+                  <option value="Chess">Chess</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Match Format / Title</label>
+                <input 
+                  type="text"
+                  value={editType}
+                  onChange={(e) => setEditType(e.target.value)}
+                  placeholder="e.g., 1v1 High Rollers"
+                  required
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Entry Fee (₹)</label>
+                  <input 
+                    type="number"
+                    value={editEntryFee}
+                    onChange={(e) => setEditEntryFee(Number(e.target.value))}
+                    min={10}
+                    required
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Commission Rake (%)</label>
+                  <input 
+                    type="number"
+                    value={editRakePercent}
+                    onChange={(e) => setEditRakePercent(Number(e.target.value))}
+                    min={0}
+                    max={50}
+                    required
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-bold"
+                  />
+                </div>
+              </div>
+
+              {/* Calculated Prize Pool Preview */}
+              <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200/80 flex items-center justify-between text-xs">
+                <span className="text-slate-500 font-medium">Updated Winner Prize Pool:</span>
+                <span className="text-base font-extrabold text-emerald-600">₹{calculatedEditPrizePool}</span>
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <input 
+                  type="checkbox"
+                  id="edit-featured"
+                  checked={editIsFeatured}
+                  onChange={(e) => setEditIsFeatured(e.target.checked)}
+                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="edit-featured" className="text-xs font-medium text-slate-700 cursor-pointer">
+                  Pin to Home Screen Featured Carousel
+                </label>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setEditingItem(null)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
+                >
+                  <Check size={14} /> Save Pool Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingId && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full overflow-hidden shadow-2xl border border-slate-200 p-6 space-y-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto">
+              <Trash2 size={24} />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-900 text-base">Delete Contest Pool?</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Are you sure you want to remove pool <strong className="text-slate-800">{deletingId}</strong>? This action will remove it from the mobile app match selection list.
+              </p>
+            </div>
+
+            <div className="pt-2 flex items-center justify-center gap-3">
+              <button
+                onClick={() => setDeletingId(null)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteContest(deletingId)}
+                className="px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-sm transition-colors"
+              >
+                Confirm Delete
+              </button>
+            </div>
           </div>
         </div>
       )}
