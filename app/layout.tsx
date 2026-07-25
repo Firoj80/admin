@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Link from 'next/link';
-import { 
-  LayoutDashboard, Wallet, ShieldAlert, Trophy, 
-  Users, Dices, Send, Search, Bell, Menu
-} from 'lucide-react';
+import SidebarNav from '@/components/SidebarNav';
+import { Search, Bell, Menu } from 'lucide-react';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -35,51 +32,7 @@ export default function RootLayout({
             </div>
           </div>
 
-          <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-            <div className="text-[11px] font-semibold text-slate-400 px-3 mb-2 uppercase tracking-wider">Main</div>
-            <Link href="/" className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-indigo-50 text-indigo-700 font-semibold text-sm">
-              <LayoutDashboard size={18} />
-              Overview
-            </Link>
-
-            <div className="text-[11px] font-semibold text-slate-400 px-3 mt-6 mb-2 uppercase tracking-wider">Financial Desk</div>
-            <Link href="/financial/deposits" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium text-sm transition-colors">
-              <Wallet size={18} />
-              Deposits
-            </Link>
-            <Link href="/financial/withdrawals" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium text-sm transition-colors">
-              <Wallet size={18} />
-              Withdrawals
-            </Link>
-
-            <div className="text-[11px] font-semibold text-slate-400 px-3 mt-6 mb-2 uppercase tracking-wider">Operations</div>
-            <Link href="/games" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium text-sm transition-colors">
-              <Dices size={18} />
-              Games & Categories
-            </Link>
-            <Link href="/disputes" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium text-sm transition-colors">
-              <ShieldAlert size={18} />
-              Disputes
-            </Link>
-            <Link href="/tournaments" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium text-sm transition-colors">
-              <Trophy size={18} />
-              Tournaments
-            </Link>
-            <Link href="/users" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium text-sm transition-colors">
-              <Users size={18} />
-              Users
-            </Link>
-
-            <div className="text-[11px] font-semibold text-slate-400 px-3 mt-6 mb-2 uppercase tracking-wider">Config</div>
-            <Link href="/spin-wheel" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium text-sm transition-colors">
-              <Dices size={18} />
-              Spin Wheel
-            </Link>
-            <Link href="/push-studio" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium text-sm transition-colors">
-              <Send size={18} />
-              Push Studio
-            </Link>
-          </nav>
+          <SidebarNav />
         </aside>
 
         {/* Main Content Area */}
