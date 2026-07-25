@@ -53,6 +53,10 @@ export default function RootLayout({
             </Link>
 
             <div className="text-[11px] font-semibold text-slate-400 px-3 mt-6 mb-2 uppercase tracking-wider">Operations</div>
+            <Link href="/games" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium text-sm transition-colors">
+              <Dices size={18} />
+              Games & Categories
+            </Link>
             <Link href="/disputes" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium text-sm transition-colors">
               <ShieldAlert size={18} />
               Disputes
