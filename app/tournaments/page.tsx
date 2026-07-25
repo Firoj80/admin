@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Trophy, Plus, Star, Edit3, Trash2, X, Check, Percent, Search } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Trophy, Plus, Star, Edit3, Trash2, X, Check, Percent, Search, RefreshCw } from 'lucide-react';
 
 interface TournamentItem {
   id: string;
@@ -25,6 +25,7 @@ const mockTournaments: TournamentItem[] = [
 
 export default function TournamentsPage() {
   const [tournaments, setTournaments] = useState<TournamentItem[]>(mockTournaments);
+  const [loading, setLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingItem, setEditingItem] = useState<TournamentItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -49,6 +50,37 @@ export default function TournamentsPage() {
   const calculatedCreatePrizePool = Math.floor((newEntryFee * newMaxSlots) * (1 - newRakePercent / 100));
   const calculatedEditPrizePool = Math.floor((editEntryFee * editMaxSlots) * (1 - editRakePercent / 100));
 
+  const fetchLivePools = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/admin/tournaments');
+      const json = await res.json();
+      if (json.success && json.data && json.data.length > 0) {
+        const mapped: TournamentItem[] = json.data.map((p: any) => ({
+          id: p.id,
+          game: p.game_type,
+          type: p.match_format,
+          entryFee: Number(p.entry_fee),
+          prizePool: Number(p.prize_pool),
+          rakePercent: Number(p.rake_percent || 10),
+          joined: p.joined_slots || 0,
+          maxSlots: p.max_slots || 2,
+          isFeatured: p.is_featured ?? false,
+          isActive: p.is_active ?? true,
+        }));
+        setTournaments(mapped);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch live contest pools from Supabase:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLivePools();
+  }, []);
+
   const openEditModal = (item: TournamentItem) => {
     setEditingItem(item);
     setEditGame(item.game);
@@ -59,15 +91,41 @@ export default function TournamentsPage() {
     setEditIsFeatured(item.isFeatured);
   };
 
-  const toggleFeatured = (id: string) => {
-    setTournaments(prev => prev.map(t => t.id === id ? { ...t, isFeatured: !t.isFeatured } : t));
+  const toggleFeatured = async (id: string) => {
+    const target = tournaments.find(t => t.id === id);
+    if (!target) return;
+    const newFeatured = !target.isFeatured;
+    setTournaments(prev => prev.map(t => t.id === id ? { ...t, isFeatured: newFeatured } : t));
+
+    try {
+      await fetch('/api/admin/tournaments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'TOGGLE_FEATURED', poolId: id, isFeatured: newFeatured })
+      });
+    } catch (err) {
+      console.warn('Toggle featured error:', err);
+    }
   };
 
-  const toggleActive = (id: string) => {
-    setTournaments(prev => prev.map(t => t.id === id ? { ...t, isActive: !t.isActive } : t));
+  const toggleActive = async (id: string) => {
+    const target = tournaments.find(t => t.id === id);
+    if (!target) return;
+    const newActive = !target.isActive;
+    setTournaments(prev => prev.map(t => t.id === id ? { ...t, isActive: newActive } : t));
+
+    try {
+      await fetch('/api/admin/tournaments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'TOGGLE_ACTIVE', poolId: id, isActive: newActive })
+      });
+    } catch (err) {
+      console.warn('Toggle active error:', err);
+    }
   };
 
-  const handleCreateContest = (e: React.FormEvent) => {
+  const handleCreateContest = async (e: React.FormEvent) => {
     e.preventDefault();
     const newContest: TournamentItem = {
       id: `TNT-${Math.floor(100 + Math.random() * 900)}`,
@@ -83,34 +141,62 @@ export default function TournamentsPage() {
     };
     setTournaments([newContest, ...tournaments]);
     setShowCreateModal(false);
+
+    try {
+      await fetch('/api/admin/tournaments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'CREATE', poolData: newContest })
+      });
+      fetchLivePools();
+    } catch (err) {
+      console.warn('Create contest error:', err);
+    }
   };
 
-  const handleUpdateContest = (e: React.FormEvent) => {
+  const handleUpdateContest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
 
-    setTournaments(prev => prev.map(t => {
-      if (t.id === editingItem.id) {
-        return {
-          ...t,
-          game: editGame,
-          type: editType,
-          entryFee: Number(editEntryFee),
-          prizePool: calculatedEditPrizePool,
-          rakePercent: Number(editRakePercent),
-          maxSlots: Number(editMaxSlots),
-          isFeatured: editIsFeatured,
-        };
-      }
-      return t;
-    }));
+    const updatedData = {
+      game: editGame,
+      type: editType,
+      entryFee: Number(editEntryFee),
+      prizePool: calculatedEditPrizePool,
+      rakePercent: Number(editRakePercent),
+      maxSlots: Number(editMaxSlots),
+      isFeatured: editIsFeatured,
+    };
 
+    setTournaments(prev => prev.map(t => t.id === editingItem.id ? { ...t, ...updatedData } : t));
+    const targetId = editingItem.id;
     setEditingItem(null);
+
+    try {
+      await fetch('/api/admin/tournaments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'UPDATE', poolId: targetId, poolData: updatedData })
+      });
+      fetchLivePools();
+    } catch (err) {
+      console.warn('Update contest error:', err);
+    }
   };
 
-  const handleDeleteContest = (id: string) => {
+  const handleDeleteContest = async (id: string) => {
     setTournaments(prev => prev.filter(t => t.id !== id));
     setDeletingId(null);
+
+    try {
+      await fetch('/api/admin/tournaments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'DELETE', poolId: id })
+      });
+    } catch (err) {
+      console.warn('Delete contest error:', err);
+    }
   };
 
   const filteredTournaments = tournaments.filter(t => 

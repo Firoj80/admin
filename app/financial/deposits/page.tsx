@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import FinancialApprovalCard, { FinancialItem } from '@/components/FinancialApprovalCard';
 import { Wallet, Search, Filter, RefreshCw, CheckCircle2 } from 'lucide-react';
 
@@ -29,32 +29,88 @@ const MOCK_DEPOSITS: FinancialItem[] = [
     createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
     status: 'PENDING_APPROVAL',
   },
-  {
-    id: 'DEP-1003',
-    type: 'deposit',
-    userId: 'usr_3102',
-    userName: 'Amit Singh',
-    userPhone: '+91 9988776655',
-    amount: 250,
-    utrOrTxnId: '420918772910',
-    proofUrl: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=800&q=80',
-    createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-    status: 'PENDING_APPROVAL',
-  },
 ];
 
 export default function ManualDepositsPage() {
   const [deposits, setDeposits] = useState<FinancialItem[]>(MOCK_DEPOSITS);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
 
+  const fetchLiveDeposits = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/admin/deposits');
+      const json = await res.json();
+
+      if (json.success && json.data && json.data.length > 0) {
+        const mapped: FinancialItem[] = json.data.map((d: any) => ({
+          id: d.id,
+          type: 'deposit',
+          userId: d.user_id,
+          userName: d.users?.full_name || 'Gamer Profile',
+          userPhone: d.users?.phone || 'N/A',
+          amount: Number(d.amount),
+          utrOrTxnId: d.utr_number || 'N/A',
+          proofUrl: d.proof_url || 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80',
+          createdAt: d.created_at,
+          status: 'PENDING_APPROVAL'
+        }));
+        setDeposits(mapped);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch live deposits from Supabase:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveDeposits();
+  }, []);
+
   const handleApprove = async (id: string) => {
-    // In production, calls Supabase admin client / RPC
+    const target = deposits.find(d => d.id === id);
     setDeposits((prev) => prev.filter((item) => item.id !== id));
+
+    if (target) {
+      try {
+        await fetch('/api/admin/deposits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'APPROVE',
+            depositId: target.id,
+            userId: target.userId,
+            amount: target.amount,
+            utr: target.utrOrTxnId
+          })
+        });
+      } catch (err) {
+        console.warn('Deposit approve API error:', err);
+      }
+    }
   };
 
   const handleReject = async (id: string, reason: string) => {
-    // In production, calls Supabase admin client / RPC
+    const target = deposits.find(d => d.id === id);
     setDeposits((prev) => prev.filter((item) => item.id !== id));
+
+    if (target) {
+      try {
+        await fetch('/api/admin/deposits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'REJECT',
+            depositId: target.id,
+            userId: target.userId,
+            reason
+          })
+        });
+      } catch (err) {
+        console.warn('Deposit reject API error:', err);
+      }
+    }
   };
 
   const filteredDeposits = deposits.filter((item) => 
@@ -84,10 +140,10 @@ export default function ManualDepositsPage() {
         </div>
         <div className="flex items-center gap-2">
           <button 
-            onClick={() => setDeposits(MOCK_DEPOSITS)}
+            onClick={fetchLiveDeposits}
             className="px-3 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors inline-flex items-center gap-1.5"
           >
-            <RefreshCw size={14} /> Refresh Queue
+            <RefreshCw size={14} className={loading ? 'animate-spin text-indigo-600' : ''} /> Refresh Queue
           </button>
         </div>
       </div>
