@@ -1,7 +1,41 @@
-import { Wallet, ShieldAlert, Trophy, ArrowUpRight, ArrowDownRight, Clock, MoreHorizontal } from 'lucide-react';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Wallet, ShieldAlert, Trophy, ArrowUpRight, Clock, MoreHorizontal, CheckCircle2, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ExecutiveDashboardPage() {
+  const [stats, setStats] = useState({
+    totalRevenue: 0,
+    pendingDepositsCount: 0,
+    pendingWithdrawalsCount: 0,
+    openDisputesCount: 0,
+    activeContestsCount: 0,
+    actionRequiredItems: [] as any[]
+  });
+  const [loading, setLoading] = useState(true);
+
+  const fetchOverviewStats = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/admin/overview');
+      const json = await res.json();
+      if (json.success && json.data) {
+        setStats(json.data);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch overview stats from Supabase:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOverviewStats();
+  }, []);
+
+  const totalPendingApprovals = stats.pendingDepositsCount + stats.pendingWithdrawalsCount;
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-10">
       
@@ -14,10 +48,13 @@ export default function ExecutiveDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-medium rounded-lg shadow-sm hover:bg-slate-50 transition-colors">
-            Download Report
+          <button 
+            onClick={fetchOverviewStats}
+            className="px-3 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors inline-flex items-center gap-1.5"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin text-indigo-600' : ''} /> Refresh Stats
           </button>
-          <Link href="/financial/deposits" className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">
+          <Link href="/financial/deposits" className="px-4 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">
             Review Pending Queues
           </Link>
         </div>
@@ -27,12 +64,12 @@ export default function ExecutiveDashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Revenue</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Volume Credited</span>
             <Wallet size={18} className="text-indigo-600" />
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 mb-1">₹42,850.00</div>
+          <div className="text-2xl font-extrabold text-slate-900 mb-1">₹{stats.totalRevenue.toLocaleString()}</div>
           <div className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
-            <ArrowUpRight size={14} /> +18.4% from last month
+            <ArrowUpRight size={14} /> Live Supabase Balance
           </div>
         </div>
 
@@ -41,9 +78,9 @@ export default function ExecutiveDashboardPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Pending Approvals</span>
             <Clock size={18} className="text-amber-500" />
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 mb-1">14</div>
+          <div className="text-2xl font-extrabold text-slate-900 mb-1">{totalPendingApprovals}</div>
           <div className="text-xs text-slate-500 font-medium flex gap-2">
-            <span>8 Deposits</span> • <span>6 Withdrawals</span>
+            <span>{stats.pendingDepositsCount} Deposits</span> • <span>{stats.pendingWithdrawalsCount} Withdrawals</span>
           </div>
         </div>
 
@@ -52,9 +89,9 @@ export default function ExecutiveDashboardPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Open Disputes</span>
             <ShieldAlert size={18} className="text-rose-500" />
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 mb-1">3</div>
+          <div className="text-2xl font-extrabold text-slate-900 mb-1">{stats.openDisputesCount}</div>
           <div className="text-xs text-rose-600 font-semibold flex items-center gap-1">
-            <ArrowDownRight size={14} /> Requires admin attention
+            {stats.openDisputesCount > 0 ? 'Requires admin attention' : 'No active disputes'}
           </div>
         </div>
 
@@ -63,9 +100,9 @@ export default function ExecutiveDashboardPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Active Contests</span>
             <Trophy size={18} className="text-emerald-500" />
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 mb-1">24</div>
+          <div className="text-2xl font-extrabold text-slate-900 mb-1">{stats.activeContestsCount}</div>
           <div className="text-xs text-slate-500 font-medium flex items-center gap-1">
-            <ArrowUpRight size={14} className="text-emerald-600" /> +2 since yesterday
+            Live pools published
           </div>
         </div>
       </div>
@@ -78,30 +115,37 @@ export default function ExecutiveDashboardPage() {
           <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
             <div>
               <h2 className="font-bold text-base text-slate-900">Action Required Desk</h2>
-              <p className="text-xs text-slate-500">Manual payment approvals and match dispute queue</p>
+              <p className="text-xs text-slate-500">Live payment approvals queue from Supabase</p>
             </div>
             <button className="text-slate-400 hover:text-slate-600">
               <MoreHorizontal size={18} />
             </button>
           </div>
           <div className="divide-y divide-slate-100">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-700">
-                    U{i}
+            {stats.actionRequiredItems.length > 0 ? (
+              stats.actionRequiredItems.map((item: any, idx: number) => (
+                <div key={item.id || idx} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-700 uppercase">
+                      {item.users?.full_name?.charAt(0) || 'U'}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm text-slate-900">Deposit Request #{item.id}</p>
+                      <p className="text-xs text-slate-500">Requested ₹{item.amount} via UPI UTR: {item.utr_number || 'N/A'}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-sm text-slate-900">Deposit Verification #{1000 + i}</p>
-                    <p className="text-xs text-slate-500">User requested ₹500 via UPI UTR proof</p>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60 px-2.5 py-0.5 rounded-full">Pending Review</span>
+                    <Link href="/financial/deposits" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">Review</Link>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60 px-2.5 py-0.5 rounded-full">Pending Review</span>
-                  <Link href="/financial/deposits" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">Review</Link>
-                </div>
+              ))
+            ) : (
+              <div className="p-8 text-center text-xs text-slate-500 flex flex-col items-center gap-2">
+                <CheckCircle2 size={24} className="text-emerald-500" />
+                <span>All pending queues clear! No manual actions required right now.</span>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -116,7 +160,7 @@ export default function ExecutiveDashboardPage() {
                   <span className="font-semibold text-sm text-slate-900">Resolve Match Disputes</span>
                   <ShieldAlert size={16} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
                 </div>
-                <p className="text-xs text-slate-500">Review 3 conflicting screenshot proofs</p>
+                <p className="text-xs text-slate-500">{stats.openDisputesCount} conflicting match disputes</p>
               </Link>
             </div>
             
@@ -126,7 +170,7 @@ export default function ExecutiveDashboardPage() {
                   <span className="font-semibold text-sm text-slate-900">Release Payouts</span>
                   <Wallet size={16} className="text-slate-400 group-hover:text-indigo-600 transition-colors" />
                 </div>
-                <p className="text-xs text-slate-500">Approve 6 pending bank IMPS payouts</p>
+                <p className="text-xs text-slate-500">{stats.pendingWithdrawalsCount} pending IMPS payouts</p>
               </Link>
             </div>
             
@@ -136,7 +180,7 @@ export default function ExecutiveDashboardPage() {
                   <span className="font-semibold text-sm text-slate-900">Manage Contests</span>
                   <Trophy size={16} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
                 </div>
-                <p className="text-xs text-slate-500">Create or edit contest entry fees</p>
+                <p className="text-xs text-slate-500">{stats.activeContestsCount} active contest pools</p>
               </Link>
             </div>
           </div>

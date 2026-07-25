@@ -4,36 +4,9 @@ import { useState, useEffect } from 'react';
 import FinancialApprovalCard, { FinancialItem } from '@/components/FinancialApprovalCard';
 import { Wallet, Search, Filter, RefreshCw, CheckCircle2 } from 'lucide-react';
 
-const MOCK_DEPOSITS: FinancialItem[] = [
-  {
-    id: 'DEP-1001',
-    type: 'deposit',
-    userId: 'usr_8819',
-    userName: 'Rahul Sharma',
-    userPhone: '+91 9876543210',
-    amount: 500,
-    utrOrTxnId: '420918239102',
-    proofUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80',
-    createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-    status: 'PENDING_APPROVAL',
-  },
-  {
-    id: 'DEP-1002',
-    type: 'deposit',
-    userId: 'usr_9421',
-    userName: 'Vikas Kumar',
-    userPhone: '+91 9123456789',
-    amount: 1000,
-    utrOrTxnId: '420918991204',
-    proofUrl: 'https://images.unsplash.com/photo-1554224154-26032ffc0d07?w=800&q=80',
-    createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    status: 'PENDING_APPROVAL',
-  },
-];
-
 export default function ManualDepositsPage() {
-  const [deposits, setDeposits] = useState<FinancialItem[]>(MOCK_DEPOSITS);
-  const [loading, setLoading] = useState(false);
+  const [deposits, setDeposits] = useState<FinancialItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
   const fetchLiveDeposits = async () => {
@@ -42,7 +15,7 @@ export default function ManualDepositsPage() {
       const res = await fetch('/api/admin/deposits');
       const json = await res.json();
 
-      if (json.success && json.data && json.data.length > 0) {
+      if (json.success && Array.isArray(json.data)) {
         const mapped: FinancialItem[] = json.data.map((d: any) => ({
           id: d.id,
           type: 'deposit',
@@ -56,9 +29,12 @@ export default function ManualDepositsPage() {
           status: 'PENDING_APPROVAL'
         }));
         setDeposits(mapped);
+      } else {
+        setDeposits([]);
       }
     } catch (err) {
       console.warn('Failed to fetch live deposits from Supabase:', err);
+      setDeposits([]);
     } finally {
       setLoading(false);
     }

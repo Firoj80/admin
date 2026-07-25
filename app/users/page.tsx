@@ -15,16 +15,9 @@ interface UserItem {
   status: 'ACTIVE' | 'FROZEN';
 }
 
-const mockUsers: UserItem[] = [
-  { id: 'USR-101', name: 'Firoj Alam', username: 'Firoj', mobile: '+91 9988776655', mainBalance: 1250, bonusBalance: 140, winningsBalance: 850, matchesPlayed: 42, status: 'ACTIVE' },
-  { id: 'USR-102', name: 'Faizan Ahmed', username: 'FaizanX', mobile: '+91 9876543210', mainBalance: 450, bonusBalance: 50, winningsBalance: 120, matchesPlayed: 18, status: 'ACTIVE' },
-  { id: 'USR-103', name: 'Aniket Sharma', username: 'AniketPro', mobile: '+91 9123456789', mainBalance: 0, bonusBalance: 10, winningsBalance: 0, matchesPlayed: 5, status: 'FROZEN' },
-  { id: 'USR-104', name: 'Rahul Roy', username: 'RahulGamer', mobile: '+91 9555544444', mainBalance: 3100, bonusBalance: 200, winningsBalance: 1950, matchesPlayed: 64, status: 'ACTIVE' },
-];
-
 export default function UsersModerationPage() {
-  const [users, setUsers] = useState<UserItem[]>(mockUsers);
-  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   
   // Modals

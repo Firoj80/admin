@@ -1,65 +1,97 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import FinancialApprovalCard, { FinancialItem } from '@/components/FinancialApprovalCard';
 import { Wallet, Search, RefreshCw, CheckCircle2, ArrowUpRight } from 'lucide-react';
 
-const MOCK_WITHDRAWALS: FinancialItem[] = [
-  {
-    id: 'WTH-8001',
-    type: 'withdrawal',
-    userId: 'usr_5510',
-    userName: 'Karan Patel',
-    userPhone: '+91 9898989898',
-    amount: 1200,
-    payoutDetails: {
-      upiId: 'karanpatel@okicici',
-    },
-    createdAt: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
-    status: 'PENDING_APPROVAL',
-  },
-  {
-    id: 'WTH-8002',
-    type: 'withdrawal',
-    userId: 'usr_7721',
-    userName: 'Priya Sharma',
-    userPhone: '+91 9777766666',
-    amount: 2500,
-    payoutDetails: {
-      accountNumber: '920198273645',
-      ifsc: 'HDFC0001234',
-      beneficiaryName: 'Priya Sharma',
-    },
-    createdAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
-    status: 'PENDING_APPROVAL',
-  },
-  {
-    id: 'WTH-8003',
-    type: 'withdrawal',
-    userId: 'usr_1092',
-    userName: 'Sanjay Gupta',
-    userPhone: '+91 9555544444',
-    amount: 800,
-    payoutDetails: {
-      upiId: 'sanjay@paytm',
-    },
-    createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-    status: 'PENDING_APPROVAL',
-  },
-];
-
 export default function ManualWithdrawalsPage() {
-  const [withdrawals, setWithdrawals] = useState<FinancialItem[]>(MOCK_WITHDRAWALS);
+  const [withdrawals, setWithdrawals] = useState<FinancialItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
+  const fetchLiveWithdrawals = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/admin/withdrawals');
+      const json = await res.json();
+
+      if (json.success && Array.isArray(json.data)) {
+        const mapped: FinancialItem[] = json.data.map((w: any) => ({
+          id: w.id,
+          type: 'withdrawal',
+          userId: w.user_id,
+          userName: w.users?.full_name || 'Gamer Profile',
+          userPhone: w.users?.phone || 'N/A',
+          amount: Number(w.amount),
+          payoutDetails: {
+            upiId: w.upi_id || undefined,
+            accountNumber: w.account_number || undefined,
+            ifsc: w.ifsc || undefined,
+            beneficiaryName: w.beneficiary_name || undefined
+          },
+          createdAt: w.created_at,
+          status: 'PENDING_APPROVAL'
+        }));
+        setWithdrawals(mapped);
+      } else {
+        setWithdrawals([]);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch live withdrawals from Supabase:', err);
+      setWithdrawals([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveWithdrawals();
+  }, []);
+
   const handleApprove = async (id: string, utr?: string) => {
-    // Production RPC: deduct locked balance, set COMPLETED, log payout UTR
+    const target = withdrawals.find(w => w.id === id);
     setWithdrawals((prev) => prev.filter((item) => item.id !== id));
+
+    if (target) {
+      try {
+        await fetch('/api/admin/withdrawals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'APPROVE',
+            withdrawalId: target.id,
+            userId: target.userId,
+            amount: target.amount,
+            utr: utr || 'IMPS'
+          })
+        });
+      } catch (err) {
+        console.warn('Withdrawal approve API error:', err);
+      }
+    }
   };
 
   const handleReject = async (id: string, reason: string) => {
-    // Production RPC: unlock & refund balance back to winnings_balance, set REJECTED
+    const target = withdrawals.find(w => w.id === id);
     setWithdrawals((prev) => prev.filter((item) => item.id !== id));
+
+    if (target) {
+      try {
+        await fetch('/api/admin/withdrawals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'REJECT',
+            withdrawalId: target.id,
+            userId: target.userId,
+            amount: target.amount,
+            reason
+          })
+        });
+      } catch (err) {
+        console.warn('Withdrawal reject API error:', err);
+      }
+    }
   };
 
   const filteredWithdrawals = withdrawals.filter((item) => 
@@ -90,10 +122,10 @@ export default function ManualWithdrawalsPage() {
         </div>
         <div className="flex items-center gap-2">
           <button 
-            onClick={() => setWithdrawals(MOCK_WITHDRAWALS)}
+            onClick={fetchLiveWithdrawals}
             className="px-3 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg shadow-sm hover:bg-slate-50 transition-colors inline-flex items-center gap-1.5"
           >
-            <RefreshCw size={14} /> Refresh Queue
+            <RefreshCw size={14} className={loading ? 'animate-spin text-indigo-600' : ''} /> Refresh Queue
           </button>
         </div>
       </div>
