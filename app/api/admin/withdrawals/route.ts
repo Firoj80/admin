@@ -32,19 +32,7 @@ export async function POST(request: Request) {
     }
 
     if (action === 'APPROVE') {
-      // 1. Mark withdrawal as COMPLETED
-      const { error: wthErr } = await supabaseAdmin
-        .from('withdrawals')
-        .update({ 
-          status: 'COMPLETED', 
-          completed_at: new Date().toISOString(),
-          payout_utr: utr || null 
-        })
-        .eq('id', withdrawalId);
-
-      if (wthErr) throw wthErr;
-
-      // 2. Clear locked_balance in user_wallets
+      // 1. Clear locked_balance in user_wallets first
       const { data: wallet } = await supabaseAdmin
         .from('user_wallets')
         .select('locked_balance')
@@ -56,10 +44,13 @@ export async function POST(request: Request) {
 
       await supabaseAdmin
         .from('user_wallets')
-        .update({ locked_balance: newLocked })
+        .update({ 
+          locked_balance: newLocked,
+          updated_at: new Date().toISOString()
+        })
         .eq('user_id', userId);
 
-      // 3. Log transaction
+      // 2. Log transaction
       await supabaseAdmin.from('wallet_transactions').insert({
         user_id: userId,
         type: 'WITHDRAWAL_PAYOUT',
@@ -70,21 +61,21 @@ export async function POST(request: Request) {
         created_at: new Date().toISOString(),
       });
 
-      return NextResponse.json({ success: true, message: 'Withdrawal payout released successfully' });
-    } else if (action === 'REJECT') {
-      // 1. Update status to REJECTED
-      const { error: rejectErr } = await supabaseAdmin
+      // 3. Mark withdrawal as COMPLETED LAST so Supabase Realtime notifies clients after balance is already credited
+      const { error: wthErr } = await supabaseAdmin
         .from('withdrawals')
         .update({ 
-          status: 'REJECTED', 
-          rejection_reason: reason || 'Invalid payment details / Security check failed',
-          rejected_at: new Date().toISOString()
+          status: 'COMPLETED', 
+          completed_at: new Date().toISOString(),
+          payout_utr: utr || null 
         })
         .eq('id', withdrawalId);
 
-      if (rejectErr) throw rejectErr;
+      if (wthErr) throw wthErr;
 
-      // 2. Unlock & Refund back to winnings_balance
+      return NextResponse.json({ success: true, message: 'Withdrawal payout released successfully' });
+    } else if (action === 'REJECT') {
+      // 1. Unlock & Refund back to winnings_balance first
       const { data: wallet } = await supabaseAdmin
         .from('user_wallets')
         .select('winnings_balance, locked_balance')
@@ -101,22 +92,35 @@ export async function POST(request: Request) {
         .from('user_wallets')
         .update({ 
           winnings_balance: newWinnings,
-          locked_balance: newLocked
+          locked_balance: newLocked,
+          updated_at: new Date().toISOString()
         })
         .eq('user_id', userId);
 
-      // 3. Log refund transaction
+      // 2. Log refund transaction
       await supabaseAdmin.from('wallet_transactions').insert({
         user_id: userId,
         type: 'WITHDRAWAL_REFUND',
         amount: Number(amount),
         bucket: 'winnings_balance',
         reference_id: withdrawalId,
-        description: `Withdrawal rejected & refunded. Reason: ${reason || 'N/A'}`,
+        description: `Withdrawal rejected & refunded: ${reason || 'Security check failed'}`,
         created_at: new Date().toISOString(),
       });
 
-      return NextResponse.json({ success: true, message: 'Withdrawal rejected & wallet refunded successfully' });
+      // 3. Update status to REJECTED LAST so Supabase Realtime notifies clients after refund is credited
+      const { error: rejectErr } = await supabaseAdmin
+        .from('withdrawals')
+        .update({ 
+          status: 'REJECTED', 
+          rejection_reason: reason || 'Invalid payment details / Security check failed',
+          rejected_at: new Date().toISOString()
+        })
+        .eq('id', withdrawalId);
+
+      if (rejectErr) throw rejectErr;
+
+      return NextResponse.json({ success: true, message: 'Withdrawal rejected & refunded successfully' });
     }
 
     return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });

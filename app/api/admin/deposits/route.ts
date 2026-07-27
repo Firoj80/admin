@@ -33,7 +33,39 @@ export async function POST(request: Request) {
     }
 
     if (action === 'APPROVE') {
-      // 1. Update deposit status
+      // 1. Fetch current wallet balance first
+      const { data: wallet } = await supabaseAdmin
+        .from('user_wallets')
+        .select('deposit_balance')
+        .eq('user_id', userId)
+        .single();
+
+      const currentBalance = wallet?.deposit_balance || 0;
+      const newBalance = currentBalance + Number(amount);
+
+      // 2. Update user_wallets deposit_balance BEFORE triggering Realtime on deposits table
+      const { error: walletErr } = await supabaseAdmin
+        .from('user_wallets')
+        .update({ 
+          deposit_balance: newBalance,
+          updated_at: new Date().toISOString() 
+        })
+        .eq('user_id', userId);
+
+      if (walletErr) throw walletErr;
+
+      // 3. Log wallet transaction
+      await supabaseAdmin.from('wallet_transactions').insert({
+        user_id: userId,
+        type: 'DEPOSIT_CREDIT',
+        amount: Number(amount),
+        bucket: 'deposit_balance',
+        reference_id: depositId,
+        description: `Manual deposit approval (UTR: ${utr || 'N/A'})`,
+        created_at: new Date().toISOString(),
+      });
+
+      // 4. Update deposit status LAST so Supabase Realtime notifies clients after balance is already credited
       const { error: depositErr } = await supabaseAdmin
         .from('deposits')
         .update({ 
@@ -44,34 +76,6 @@ export async function POST(request: Request) {
         .eq('id', depositId);
 
       if (depositErr) throw depositErr;
-
-      // 2. Fetch current wallet balance
-      const { data: wallet } = await supabaseAdmin
-        .from('user_wallets')
-        .select('deposit_balance')
-        .eq('user_id', userId)
-        .single();
-
-      const currentBalance = wallet?.deposit_balance || 0;
-      const newBalance = currentBalance + Number(amount);
-
-      // 3. Update user_wallets deposit_balance
-      const { error: walletErr } = await supabaseAdmin
-        .from('user_wallets')
-        .upsert({ user_id: userId, deposit_balance: newBalance });
-
-      if (walletErr) throw walletErr;
-
-      // 4. Log wallet transaction
-      await supabaseAdmin.from('wallet_transactions').insert({
-        user_id: userId,
-        type: 'DEPOSIT_CREDIT',
-        amount: Number(amount),
-        bucket: 'deposit_balance',
-        reference_id: depositId,
-        description: `Manual deposit approval (UTR: ${utr || 'N/A'})`,
-        created_at: new Date().toISOString(),
-      });
 
       return NextResponse.json({ success: true, message: 'Deposit approved & wallet credited successfully' });
     } else if (action === 'REJECT') {

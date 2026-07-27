@@ -7,8 +7,12 @@ import Link from 'next/link';
 export default function ExecutiveDashboardPage() {
   const [stats, setStats] = useState({
     totalDepositVolume: 0,
+    totalWithdrawalVolume: 0,
+    netCashflow: 0,
     platformRevenue: 0,
     totalProfit: 0,
+    totalUsersCount: 0,
+    totalMatchesCount: 0,
     pendingDepositsCount: 0,
     pendingWithdrawalsCount: 0,
     openDisputesCount: 0,
@@ -63,7 +67,7 @@ export default function ExecutiveDashboardPage() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 mb-3">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Profit</span>
@@ -127,6 +131,28 @@ export default function ExecutiveDashboardPage() {
           <div className="text-2xl font-extrabold text-slate-900 mb-1">{stats.activeContestsCount}</div>
           <div className="text-xs text-slate-500 font-medium flex items-center gap-1">
             Live pools published
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between text-slate-500 mb-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Users</span>
+            <Wallet size={18} className="text-violet-500" />
+          </div>
+          <div className="text-2xl font-extrabold text-slate-900 mb-1">{stats.totalUsersCount}</div>
+          <div className="text-xs text-slate-500 font-medium flex items-center gap-1">
+            Registered Players
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between text-slate-500 mb-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Matches</span>
+            <Trophy size={18} className="text-blue-500" />
+          </div>
+          <div className="text-2xl font-extrabold text-slate-900 mb-1">{stats.totalMatchesCount}</div>
+          <div className="text-xs text-slate-500 font-medium flex items-center gap-1">
+            Matches Created
           </div>
         </div>
       </div>

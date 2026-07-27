@@ -39,17 +39,27 @@ export async function GET() {
       ? approvedDeposits.reduce((acc, curr) => acc + Number(curr.amount || 0), 0)
       : 0;
 
-    // 6. Compute total platform revenue from matches
+    // 5b. Compute total approved withdrawal volume
+    const { data: approvedWithdrawals } = await supabaseAdmin
+      .from('withdrawals')
+      .select('amount')
+      .in('status', ['APPROVED', 'COMPLETED', 'PAID']);
+
+    const totalWithdrawalVolume = approvedWithdrawals
+      ? approvedWithdrawals.reduce((acc, curr) => acc + Number(curr.amount || 0), 0)
+      : 0;
+
+    // 6. Compute total platform revenue from matches (SETTLED or COMPLETED)
     const { data: settledMatches } = await supabaseAdmin
       .from('matches')
       .select('entry_fee, prize_pool')
-      .eq('status', 'SETTLED');
+      .in('status', ['SETTLED', 'COMPLETED', 'FINISHED']);
 
     const platformRevenue = settledMatches
       ? settledMatches.reduce((acc, curr) => {
           const collected = Number(curr.entry_fee || 0) * 2;
           const distributed = Number(curr.prize_pool || 0);
-          return acc + (collected - distributed);
+          return acc + Math.max(0, collected - distributed);
         }, 0)
       : 0;
 
@@ -57,8 +67,7 @@ export async function GET() {
     const { data: bonusTransactions } = await supabaseAdmin
       .from('wallet_transactions')
       .select('amount')
-      .eq('bucket', 'bonus_balance')
-      .eq('type', 'CREDIT');
+      .eq('bucket', 'bonus_balance');
       
     const totalBonusGiven = bonusTransactions
       ? bonusTransactions.reduce((acc, curr) => acc + Number(curr.amount || 0), 0)
@@ -66,12 +75,25 @@ export async function GET() {
 
     const totalProfit = platformRevenue - totalBonusGiven;
 
+    // 8. Fetch total users & total matches counts
+    const { count: totalUsersCount } = await supabaseAdmin
+      .from('users')
+      .select('*', { count: 'exact', head: true });
+
+    const { count: totalMatchesCount } = await supabaseAdmin
+      .from('matches')
+      .select('*', { count: 'exact', head: true });
+
     return NextResponse.json({
       success: true,
       data: {
         totalDepositVolume,
+        totalWithdrawalVolume,
+        netCashflow: totalDepositVolume - totalWithdrawalVolume,
         platformRevenue,
         totalProfit,
+        totalUsersCount: totalUsersCount || 0,
+        totalMatchesCount: totalMatchesCount || 0,
         pendingDepositsCount: pendingDepCount || 0,
         pendingWithdrawalsCount: pendingWthCount || 0,
         openDisputesCount: disputesCount || 0,
