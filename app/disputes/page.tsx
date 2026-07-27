@@ -19,6 +19,7 @@ export default function DisputesPage() {
         const mapped: DisputeMatch[] = json.data.map((m: any) => ({
           matchId: m.id,
           gameType: m.game_type || 'Ludo King',
+          gameMode: m.game_mode || 'EXTERNAL',
           roomCode: m.room_code || 'N/A',
           entryFee: Number(m.entry_fee),
           prizePool: Number(m.prize_pool),

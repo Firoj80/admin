@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Trophy, RefreshCw, Eye, ExternalLink, AlertTriangle, ShieldCheck, User } from 'lucide-react';
+import { Trophy, RefreshCw, Eye, ExternalLink, AlertTriangle, ShieldCheck, User, Search } from 'lucide-react';
+import Link from 'next/link';
 
 export interface DisputeMatch {
   matchId: string;
-  gameType: 'Ludo King' | 'Carrom' | 'Chess';
+  gameType: string;
+  gameMode?: string;
   roomCode: string;
   entryFee: number;
   prizePool: number;
@@ -77,6 +79,12 @@ export default function SideBySideProofViewer({ dispute, onDeclareWinner, onCanc
         </div>
 
         <div className="flex items-center gap-6 text-right">
+          <Link 
+            href={`/disputes/${dispute.matchId}`}
+            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded border border-indigo-200 transition-colors flex items-center gap-1.5"
+          >
+            <Search size={14} /> View Details & Logs
+          </Link>
           <div>
             <span className="text-xs font-semibold text-slate-400 block uppercase tracking-wider">Entry Fee</span>
             <span className="text-sm font-bold text-slate-700">₹{dispute.entryFee} / player</span>
