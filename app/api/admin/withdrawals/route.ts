@@ -32,48 +32,38 @@ export async function POST(request: Request) {
     }
 
     if (action === 'APPROVE') {
-      // 1. Fetch full wallet to properly deduct balance
+      // NOTE: The balance was already deducted from user_wallets when the user submitted
+      // the withdrawal request (done in the Android app). Admin approval only needs to
+      // clear the locked_balance and log the completion transaction.
       const { data: wallet } = await supabaseAdmin
         .from('user_wallets')
-        .select('deposit_balance, winnings_balance, locked_balance')
+        .select('locked_balance')
         .eq('user_id', userId)
         .single();
 
-      const amt = Number(amount);
-      const currentDeposit = wallet?.deposit_balance || 0;
-      const currentWinnings = wallet?.winnings_balance || 0;
       const currentLocked = wallet?.locked_balance || 0;
-
-      // Deduct from winnings_balance first, then deposit_balance for the remainder
-      let deductFromWinnings = Math.min(currentWinnings, amt);
-      let deductFromDeposit = amt - deductFromWinnings;
-
-      const newWinnings = Math.max(0, currentWinnings - deductFromWinnings);
-      const newDeposit = Math.max(0, currentDeposit - deductFromDeposit);
-      const newLocked = Math.max(0, currentLocked - amt);
+      const newLocked = Math.max(0, currentLocked - Number(amount));
 
       await supabaseAdmin
         .from('user_wallets')
         .update({ 
-          deposit_balance: newDeposit,
-          winnings_balance: newWinnings,
           locked_balance: newLocked,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', userId);
 
-      // 2. Log transaction with negative amount so app shows it as debit (money out)
+      // Log the payout transaction (negative = money went out)
       await supabaseAdmin.from('wallet_transactions').insert({
         user_id: userId,
         type: 'WITHDRAWAL_PAYOUT',
-        amount: -amt,
+        amount: -Number(amount),
         bucket: 'winnings_balance',
         reference_id: withdrawalId,
         description: `Withdrawal payout released (UTR: ${utr || 'IMPS'})`,
         created_at: new Date().toISOString(),
       });
 
-      // 3. Mark withdrawal as COMPLETED LAST so Supabase Realtime notifies clients after balance is already deducted
+      // Mark withdrawal COMPLETED last so Realtime fires after updates are done
       const { error: wthErr } = await supabaseAdmin
         .from('withdrawals')
         .update({ 
@@ -86,7 +76,6 @@ export async function POST(request: Request) {
       if (wthErr) throw wthErr;
 
       return NextResponse.json({ success: true, message: 'Withdrawal payout released successfully' });
-
     } else if (action === 'REJECT') {
       // 1. Unlock & Refund back to winnings_balance first
       const { data: wallet } = await supabaseAdmin

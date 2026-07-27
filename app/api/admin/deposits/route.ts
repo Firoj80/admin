@@ -33,28 +33,37 @@ export async function POST(request: Request) {
     }
 
     if (action === 'APPROVE') {
-      // 1. Fetch current wallet balance first
-      const { data: wallet } = await supabaseAdmin
-        .from('user_wallets')
-        .select('deposit_balance')
-        .eq('user_id', userId)
-        .single();
+      // 1. Use atomic increment via RPC to avoid race condition when multiple deposits
+      //    are approved simultaneously. read-then-write causes last-write-wins bug.
+      const { error: rpcError } = await supabaseAdmin.rpc('increment_deposit_balance', {
+        p_user_id: userId,
+        p_amount: Number(amount),
+      });
 
-      const currentBalance = wallet?.deposit_balance || 0;
-      const newBalance = currentBalance + Number(amount);
+      if (rpcError) {
+        // Fallback: read-then-write if RPC not available
+        console.warn('RPC failed, falling back to read-write:', rpcError.message);
+        const { data: wallet } = await supabaseAdmin
+          .from('user_wallets')
+          .select('deposit_balance')
+          .eq('user_id', userId)
+          .single();
 
-      // 2. Update user_wallets deposit_balance BEFORE triggering Realtime on deposits table
-      const { error: walletErr } = await supabaseAdmin
-        .from('user_wallets')
-        .update({ 
-          deposit_balance: newBalance,
-          updated_at: new Date().toISOString() 
-        })
-        .eq('user_id', userId);
+        const currentBalance = wallet?.deposit_balance || 0;
+        const newBalance = currentBalance + Number(amount);
 
-      if (walletErr) throw walletErr;
+        const { error: walletErr } = await supabaseAdmin
+          .from('user_wallets')
+          .update({ 
+            deposit_balance: newBalance,
+            updated_at: new Date().toISOString() 
+          })
+          .eq('user_id', userId);
 
-      // 3. Log wallet transaction
+        if (walletErr) throw walletErr;
+      }
+
+      // 2. Log wallet transaction
       await supabaseAdmin.from('wallet_transactions').insert({
         user_id: userId,
         type: 'DEPOSIT_CREDIT',
@@ -65,7 +74,7 @@ export async function POST(request: Request) {
         created_at: new Date().toISOString(),
       });
 
-      // 4. Update deposit status LAST so Supabase Realtime notifies clients after balance is already credited
+      // 3. Update deposit status LAST so Supabase Realtime notifies clients after balance is already credited
       const { error: depositErr } = await supabaseAdmin
         .from('deposits')
         .update({ 
@@ -78,6 +87,7 @@ export async function POST(request: Request) {
       if (depositErr) throw depositErr;
 
       return NextResponse.json({ success: true, message: 'Deposit approved & wallet credited successfully' });
+
     } else if (action === 'REJECT') {
       // Update deposit status to REJECTED
       const { error: rejectErr } = await supabaseAdmin
