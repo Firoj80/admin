@@ -29,20 +29,49 @@ export async function GET() {
       .select('*', { count: 'exact', head: true })
       .eq('is_active', true);
 
-    // 5. Compute total completed revenue (sum of approved deposits or rake)
+    // 5. Compute total completed deposit volume
     const { data: approvedDeposits } = await supabaseAdmin
       .from('deposits')
       .select('amount')
       .eq('status', 'APPROVED');
 
-    const totalRevenue = approvedDeposits
+    const totalDepositVolume = approvedDeposits
       ? approvedDeposits.reduce((acc, curr) => acc + Number(curr.amount || 0), 0)
       : 0;
+
+    // 6. Compute total platform revenue from matches
+    const { data: settledMatches } = await supabaseAdmin
+      .from('matches')
+      .select('entry_fee, prize_pool')
+      .eq('status', 'SETTLED');
+
+    const platformRevenue = settledMatches
+      ? settledMatches.reduce((acc, curr) => {
+          const collected = Number(curr.entry_fee || 0) * 2;
+          const distributed = Number(curr.prize_pool || 0);
+          return acc + (collected - distributed);
+        }, 0)
+      : 0;
+
+    // 7. Compute total bonuses distributed
+    const { data: bonusTransactions } = await supabaseAdmin
+      .from('wallet_transactions')
+      .select('amount')
+      .eq('bucket', 'bonus_balance')
+      .eq('type', 'CREDIT');
+      
+    const totalBonusGiven = bonusTransactions
+      ? bonusTransactions.reduce((acc, curr) => acc + Number(curr.amount || 0), 0)
+      : 0;
+
+    const totalProfit = platformRevenue - totalBonusGiven;
 
     return NextResponse.json({
       success: true,
       data: {
-        totalRevenue,
+        totalDepositVolume,
+        platformRevenue,
+        totalProfit,
         pendingDepositsCount: pendingDepCount || 0,
         pendingWithdrawalsCount: pendingWthCount || 0,
         openDisputesCount: disputesCount || 0,

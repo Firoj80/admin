@@ -6,7 +6,9 @@ import Link from 'next/link';
 
 export default function ExecutiveDashboardPage() {
   const [stats, setStats] = useState({
-    totalRevenue: 0,
+    totalDepositVolume: 0,
+    platformRevenue: 0,
+    totalProfit: 0,
     pendingDepositsCount: 0,
     pendingWithdrawalsCount: 0,
     openDisputesCount: 0,
@@ -64,12 +66,34 @@ export default function ExecutiveDashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Volume Credited</span>
-            <Wallet size={18} className="text-indigo-600" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Profit</span>
+            <Wallet size={18} className="text-emerald-600" />
           </div>
-          <div className="text-2xl font-extrabold text-slate-900 mb-1">₹{stats.totalRevenue.toLocaleString()}</div>
-          <div className="text-xs text-emerald-600 font-semibold flex items-center gap-1">
-            <ArrowUpRight size={14} /> Live Supabase Balance
+          <div className="text-2xl font-extrabold text-slate-900 mb-1">₹{stats.totalProfit.toLocaleString()}</div>
+          <div className="text-xs text-slate-500 font-semibold flex items-center gap-1">
+            Net Platform Profit
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between text-slate-500 mb-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Revenue</span>
+            <ArrowUpRight size={18} className="text-indigo-600" />
+          </div>
+          <div className="text-2xl font-extrabold text-slate-900 mb-1">₹{stats.platformRevenue.toLocaleString()}</div>
+          <div className="text-xs text-slate-500 font-semibold flex items-center gap-1">
+            Gross match fees
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between text-slate-500 mb-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Deposits</span>
+            <Wallet size={18} className="text-sky-600" />
+          </div>
+          <div className="text-2xl font-extrabold text-slate-900 mb-1">₹{stats.totalDepositVolume.toLocaleString()}</div>
+          <div className="text-xs text-slate-500 font-semibold flex items-center gap-1">
+            Total incoming cash
           </div>
         </div>
 

@@ -11,7 +11,9 @@ export interface FinancialItem {
   userName?: string;
   amount: number;
   utrOrTxnId?: string;
-  proofUrl?: string;
+  proofUrl?: string | null;
+  paymentMethod?: string;
+  servedAddress?: string;
   payoutDetails?: {
     upiId?: string;
     accountNumber?: string;
@@ -58,25 +60,25 @@ export default function FinancialApprovalCard({ item, onApprove, onReject }: Fin
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:border-slate-300 transition-all">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+      {/* Top Banner */}
+      <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-            isDeposit ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/60' : 'bg-indigo-50 text-indigo-600 border border-indigo-200/60'
-          }`}>
-            {isDeposit ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}
+          <div className={`p-2 rounded-lg ${isDeposit ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+            {isDeposit ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-900 text-sm">{item.userName || item.userPhone}</span>
-              <span className="text-xs text-slate-400 font-mono">({item.userId})</span>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+              {isDeposit ? `DEPOSIT (${item.paymentMethod || 'UPI'})` : 'WITHDRAWAL'}
+            </span>
+            <div className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              ₹{item.amount.toLocaleString()}
+              <span className="text-xs font-normal text-slate-400">· {item.userPhone}</span>
             </div>
-            <span className="text-xs text-slate-500 font-medium">{new Date(item.createdAt).toLocaleString()}</span>
           </div>
         </div>
-
         <div className="text-right">
-          <div className="text-xl font-extrabold text-slate-900">₹{item.amount.toLocaleString()}</div>
-          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/60">
+          <span className="text-xs text-slate-400 block">{new Date(item.createdAt).toLocaleString()}</span>
+          <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200/50 mt-1">
             Pending Manual Review
           </span>
         </div>
@@ -87,8 +89,15 @@ export default function FinancialApprovalCard({ item, onApprove, onReject }: Fin
         {isDeposit ? (
           <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-100 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <span className="text-xs font-semibold text-slate-400 block uppercase tracking-wider">UPI / Transaction UTR</span>
+              <span className="text-xs font-semibold text-slate-400 block uppercase tracking-wider">
+                {item.paymentMethod ? `${item.paymentMethod.toUpperCase()} / UTR NUMBER` : 'UPI / TRANSACTION UTR'}
+              </span>
               <span className="text-sm font-mono font-bold text-slate-800">{item.utrOrTxnId || 'N/A'}</span>
+              {item.servedAddress && (
+                <div className="mt-1 text-[11px] font-medium text-slate-600">
+                  Received at: <span className="font-mono text-indigo-600 font-bold">{item.servedAddress}</span>
+                </div>
+              )}
             </div>
             {item.proofUrl && (
               <button 

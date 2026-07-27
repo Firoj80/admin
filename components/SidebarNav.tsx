@@ -20,6 +20,7 @@ const mainNav: NavItem[] = [
 const financialNav: NavItem[] = [
   { href: '/financial/deposits', label: 'Deposits', icon: Wallet },
   { href: '/financial/withdrawals', label: 'Withdrawals', icon: Wallet },
+  { href: '/financial/payment-settings', label: 'Payment Settings', icon: Wallet },
 ];
 
 const operationsNav: NavItem[] = [

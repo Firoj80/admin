@@ -24,7 +24,9 @@ export default function ManualDepositsPage() {
           userPhone: d.users?.phone || 'N/A',
           amount: Number(d.amount),
           utrOrTxnId: d.utr_number || 'N/A',
-          proofUrl: d.proof_url || 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80',
+          paymentMethod: d.payment_method || 'UPI',
+          servedAddress: d.served_address || '',
+          proofUrl: d.proof_url || null,
           createdAt: d.created_at,
           status: 'PENDING_APPROVAL'
         }));

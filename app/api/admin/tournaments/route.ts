@@ -30,6 +30,7 @@ export async function POST(request: Request) {
       const { data: newPool, error } = await supabaseAdmin
         .from('contest_pools')
         .insert([{
+          id: poolData.id,
           game_type: poolData.game,
           match_format: poolData.type,
           entry_fee: poolData.entryFee,

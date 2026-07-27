@@ -24,6 +24,7 @@ export default function TournamentsPage() {
   const [editingItem, setEditingItem] = useState<TournamentItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
 
   // Create Form State
   const [newGame, setNewGame] = useState<string>('Ludo King');
@@ -218,6 +219,8 @@ export default function TournamentsPage() {
     );
     if (!isGameEnabled) return false;
 
+    if (showFeaturedOnly && !t.isFeatured) return false;
+
     return (
       t.game.toLowerCase().includes(search.toLowerCase()) ||
       t.type.toLowerCase().includes(search.toLowerCase()) ||
@@ -271,8 +274,8 @@ export default function TournamentsPage() {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex items-center justify-between gap-4">
+      {/* Search Bar & Filters */}
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input 
@@ -283,8 +286,20 @@ export default function TournamentsPage() {
             className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
           />
         </div>
-        <div className="text-xs font-semibold text-slate-500">
-          Showing {filteredTournaments.length} of {tournaments.length} pools
+        <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <div className="relative">
+              <input type="checkbox" className="sr-only" checked={showFeaturedOnly} onChange={(e) => setShowFeaturedOnly(e.target.checked)} />
+              <div className={`block w-10 h-6 rounded-full transition-colors ${showFeaturedOnly ? 'bg-amber-400' : 'bg-slate-200'}`}></div>
+              <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${showFeaturedOnly ? 'transform translate-x-4' : ''}`}></div>
+            </div>
+            <span className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+              <Star size={14} className={showFeaturedOnly ? "text-amber-500 fill-amber-500" : "text-slate-400"} /> Show Featured Only
+            </span>
+          </label>
+          <div className="text-xs font-semibold text-slate-500 whitespace-nowrap border-l border-slate-200 pl-4 hidden sm:block">
+            Showing {filteredTournaments.length} of {tournaments.length}
+          </div>
         </div>
       </div>
 
